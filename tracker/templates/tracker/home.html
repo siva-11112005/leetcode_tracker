@@ -1,0 +1,994 @@
+<!-- 
+
+ltrack.py
+475 lines
+
+py
+
+to initialize django project
+
+I'll help you initialize a Django project. Here's a comprehensive guide to get you started:
+
+Django Project Initialization Commands
+Code 
+Now let me create a basic project structure guide with essential files:
+
+Basic Django Project Structure
+Code 
+Quick Start Steps:
+Install Django in a virtual environment
+Create project: django-admin startproject myproject .
+Create app: python manage.py startapp myapp
+Add app to INSTALLED_APPS in settings.py
+Run migrations: python manage.py migrate
+Create superuser: python manage.py createsuperuser
+Start server: python manage.py runserver
+The first artifact contains all the commands you need to run, and the second shows the basic project structure and configuration files you'll work with.
+
+Would you like help with any specific aspect of Django setup, like configuring a specific database, setting up templates, or creating REST APIs with Django REST Framework?
+
+(venv) C:\Users\Sivasakthivel\leedcode_tracker>python manage.py startapp myapp
+python: can't open file 'C:\\Users\\Sivasakthivel\\leedcode_tracker\\manage.py': [Errno 2] No such file or directory
+
+You need to create the Django project first! You're trying to create an app, but the project doesn't exist yet. Here's what to do:
+
+Django Project Initialization Commands
+Code ∙ Version 2 
+Run these commands in order:
+
+bash
+# 1. First, create the Django project (you skipped this!)
+django-admin startproject leetcode_tracker .
+
+# 2. Now you can create your app
+python manage.py startapp tracker
+
+# 3. Then continue with migrations
+python manage.py migrate
+
+# 4. Create superuser
+python manage.py createsuperuser
+
+# 5. Run server
+python manage.py runserver
+After running django-admin startproject leetcode_tracker ., you should see these files created:
+
+manage.py
+leetcode_tracker/ folder with settings.py, urls.py, etc.
+Then you can create your app and continue with the setup!
+
+(venv) C:\Users\Sivasakthivel\leedcode_tracker>django-admin startproject leetcode_tracker
+(venv) C:\Users\Sivasakthivel\leedcode_tracker>python manage.py startapp tracker
+python: can't open file 'C:\\Users\\Sivasakthivel\\leedcode_tracker\\manage.py': [Errno 2] No such file or directory
+(venv) C:\Users\Sivasakthivel\leedcode_tracker>
+
+You created the project WITHOUT the dot (.), so it created a nested folder structure. Now you have:
+
+leedcode_tracker/
+    leetcode_tracker/      <- Django created this folder
+        manage.py          <- manage.py is HERE
+        leetcode_tracker/
+            settings.py
+            urls.py
+            ...
+You need to navigate into that folder:
+
+bash
+# Move into the project folder
+cd leetcode_tracker
+
+# Now you can run manage.py commands
+python manage.py startapp tracker
+
+# Continue with other commands
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+Alternatively, if you want a cleaner structure in your current directory, delete the created folder and recreate with the dot:
+
+bash
+# Go back to parent directory
+cd ..
+
+# Remove the created folder
+rmdir /s leetcode_tracker
+
+# Create project in current directory (note the dot at the end)
+django-admin startproject leetcode_tracker .
+
+# Now manage.py will be in your current directory
+python manage.py startapp tracker
+The dot (.) tells Django to create the project files in the current directory instead of creating a new folder.
+
+give proper frond end for this project and make it like i can see anyone leedcode profile
+
+I'll create a modern Django web application with a beautiful frontend where you can view anyone's LeetCode profile. Let me integrate your existing ltrack.py code into a Django project.
+
+tracker/views.py
+Code 
+Now let me create the setup instructions and required configuration files:
+
+Setup Instructions
+Document 
+Continue
+
+Setup Instructions
+Document ∙ Version 2 
+Now let me create a complete requirements.txt file and a quick reference file structure:
+
+requirements.txt
+Code 
+Perfect! Now let me create one final artifact with a complete file-by-file checklist:
+
+Complete Implementation Checklist
+Document 
+Summary
+I've created a complete Django web application for you with a beautiful frontend! Here's what you got:
+
+📦 What's Included:
+Home Page (home.html) - Beautiful purple gradient design with:
+Search bar to find any LeetCode user
+Quick access to popular users
+Responsive mobile-friendly design
+Profile Page (profile.html) - Detailed user statistics showing:
+Global ranking & total problems solved
+Easy/Medium/Hard breakdown with color coding
+Contest rating & max streak
+Recent submissions with timestamps
+Loading animations
+Backend (views.py, urls.py) - Django integration:
+Async API calls to LeetCode
+JSON endpoints for frontend
+Error handling
+🚀 Quick Start:
+bash
+cd leetcode_tracker
+pip install Django aiohttp
+python manage.py migrate
+python manage.py runserver
+Then open: http://127.0.0.1:8000/
+
+✨ Features:
+🎯 View ANY LeetCode profile
+📊 Beautiful stats visualization
+🔥 Activity streaks
+📱 Mobile responsive
+⚡ Fast async loading
+All the code is ready in the artifacts above - just copy each file to the correct location using the checklist I provided!
+
+
+give home.html and profile.html
+
+home.html - Copy this to tracker/templates/tracker/home.html
+Interactive artifact 
+
+
+ -->
+<!-- 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Profile Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-btn:active {
+            transform: translateY(0);
+        }
+
+        .popular-users {
+            margin-top: 40px;
+        }
+
+        .popular-users h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .user-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .user-card {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+        }
+
+        .user-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .user-card .username {
+            font-size: 14px;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .features {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .features h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .features ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .features li {
+            padding: 8px 0;
+            color: #666;
+        }
+
+        .features li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .error {
+            color: #d32f2f;
+            text-align: center;
+            margin-top: 10px;
+            padding: 10px;
+            background: #ffebee;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .search-form {
+                flex-direction: column;
+            }
+
+            .user-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 LeetCode Tracker</h1>
+        <p class="subtitle">View anyone's LeetCode profile and statistics</p>
+
+        <form class="search-form" onsubmit="searchUser(event)">
+            <input 
+                type="text" 
+                class="search-input" 
+                id="username" 
+                placeholder="Enter LeetCode username..."
+                required
+            >
+            <button type="submit" class="search-btn">Search</button>
+        </form>
+
+        <div class="popular-users">
+            <h2>Popular Users</h2>
+            <div class="user-grid">
+                <a href="/profile/singothudinesh/" class="user-card">
+                    <div class="username">singothudinesh</div>
+                </a>
+                <a href="/profile/AngalakurthiSisira/" class="user-card">
+                    <div class="username">AngalakurthiSisira</div>
+                </a>
+                <a href="/profile/nandakishore31/" class="user-card">
+                    <div class="username">nandakishore31</div>
+                </a>
+                <a href="/profile/Ranjith_royal_986/" class="user-card">
+                    <div class="username">Ranjith_royal_986</div>
+                </a>
+                <a href="/profile/Karthik_bandlamudi/" class="user-card">
+                    <div class="username">Karthik_bandlamudi</div>
+                </a>
+                <a href="/profile/Gagan2924/" class="user-card">
+                    <div class="username">Gagan2924</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="features">
+            <h3>Features</h3>
+            <ul>
+                <li>View detailed LeetCode statistics</li>
+                <li>Track problem solving progress</li>
+                <li>See recent submissions</li>
+                <li>Contest ratings and participation</li>
+                <li>Activity streaks and rankings</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function searchUser(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            if (username) {
+                window.location.href = `/profile/${username}/`;
+            }
+        }
+    </script>
+</body>
+</html> -->
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Profile Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .search-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .user-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .user-card {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .user-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 LeetCode Tracker</h1>
+        <p class="subtitle">View anyone's LeetCode profile and statistics</p>
+        
+        <form class="search-form" onsubmit="event.preventDefault(); window.location.href='/profile/' + document.getElementById('username').value.trim() + '/';">
+            <input type="text" class="search-input" id="username" placeholder="Enter LeetCode username..." required>
+            <button type="submit" class="search-btn">Search</button>
+        </form>
+        
+        <h2 style="margin-top: 40px; color: #333;">Popular Users</h2>
+        <div class="user-grid">
+            <a href="/profile/singothudinesh/" class="user-card">singothudinesh</a>
+            <a href="/profile/AngalakurthiSisira/" class="user-card">AngalakurthiSisira</a>
+            <a href="/profile/nandakishore31/" class="user-card">nandakishore31</a>
+        </div>
+    </div>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Profile Tracker - Modern UI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            animation: float 20s infinite;
+        }
+
+        .particle:nth-child(1) { width: 80px; height: 80px; left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 60px; height: 60px; left: 80%; animation-delay: 2s; }
+        .particle:nth-child(3) { width: 100px; height: 100px; left: 50%; animation-delay: 4s; }
+        .particle:nth-child(4) { width: 40px; height: 40px; left: 30%; animation-delay: 6s; }
+        .particle:nth-child(5) { width: 70px; height: 70px; left: 70%; animation-delay: 8s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
+            50% { transform: translateY(-100vh) rotate(180deg); opacity: 0.8; }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header with logo */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            font-size: 4em;
+            margin-bottom: 10px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        h1 {
+            color: white;
+            font-size: 3.5em;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.3em;
+            font-weight: 400;
+        }
+
+        /* Glass card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: fadeInUp 0.8s ease-out 0.2s backwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Search section */
+        .search-section {
+            margin-bottom: 50px;
+        }
+
+        .search-label {
+            color: white;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 15px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 20px 25px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: white;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .search-btn {
+            padding: 20px 40px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .search-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .search-btn:active {
+            transform: translateY(-1px);
+        }
+
+        /* Popular users section */
+        .section-title {
+            color: white;
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: "🔥";
+            font-size: 1.2em;
+        }
+
+        .user-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 50px;
+        }
+
+        .user-card {
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            text-align: center;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .user-card:hover::before {
+            left: 100%;
+        }
+
+        .user-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: 700;
+            border: 3px solid white;
+        }
+
+        .username {
+            font-size: 16px;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        /* Features section */
+        .features {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .features h3 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: white;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            transition: all 0.3s;
+        }
+
+        .feature-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(10px);
+        }
+
+        .feature-icon {
+            font-size: 2em;
+        }
+
+        .feature-text {
+            font-weight: 500;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5em;
+            }
+
+            .glass-card {
+                padding: 30px 20px;
+            }
+
+            .search-form {
+                flex-direction: column;
+            }
+
+            .user-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading animation for search */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div class="logo">💻</div>
+            <h1>LeetCode Tracker</h1>
+            <p class="subtitle">Discover & Track LeetCode Profiles in Style</p>
+        </div>
+
+        <div class="glass-card">
+            <div class="search-section">
+                <label class="search-label">🔍 Search for any LeetCode user</label>
+                <form class="search-form" onsubmit="searchUser(event)">
+                    <input 
+                        type="text" 
+                        class="search-input" 
+                        id="username" 
+                        placeholder="Enter username (e.g., singothudinesh)"
+                        required
+                    >
+                    <button type="submit" class="search-btn">Search</button>
+                </form>
+            </div>
+
+            <div class="section-title">Trending Profiles</div>
+            <div class="user-grid">
+                <a href="/profile/singothudinesh/" class="user-card">
+                    <div class="user-avatar">S</div>
+                    <div class="username">singothudinesh</div>
+                </a>
+                <a href="/profile/AngalakurthiSisira/" class="user-card">
+                    <div class="user-avatar">A</div>
+                    <div class="username">AngalakurthiSisira</div>
+                </a>
+                <a href="/profile/nandakishore31/" class="user-card">
+                    <div class="user-avatar">N</div>
+                    <div class="username">nandakishore31</div>
+                </a>
+                <a href="/profile/Ranjith_royal_986/" class="user-card">
+                    <div class="user-avatar">R</div>
+                    <div class="username">Ranjith_royal_986</div>
+                </a>
+                <a href="/profile/Karthik_bandlamudi/" class="user-card">
+                    <div class="user-avatar">K</div>
+                    <div class="username">Karthik_bandlamudi</div>
+                </a>
+                <a href="/profile/Gagan2924/" class="user-card">
+                    <div class="user-avatar">G</div>
+                    <div class="username">Gagan2924</div>
+                </a>
+            </div>
+
+            <div class="features">
+                <h3>✨ Features</h3>
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-text">Comprehensive Statistics</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🏆</div>
+                        <div class="feature-text">Global Rankings</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🔥</div>
+                        <div class="feature-text">Activity Streaks</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-text">Real-time Updates</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🎯</div>
+                        <div class="feature-text">Problem Tracking</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🏅</div>
+                        <div class="feature-text">Contest Ratings</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function searchUser(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            if (username) {
+                // Add loading animation
+                const btn = event.target.querySelector('.search-btn');
+                btn.textContent = 'Loading...';
+                btn.style.animation = 'pulse 1s infinite';
+                
+                // Navigate to profile
+                window.location.href = `/profile/${username}/`;
+            }
+        }
+
+        // Add smooth scroll on page load
+        window.addEventListener('load', () => {
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.5s';
+                document.body.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+</body>
+</html>
