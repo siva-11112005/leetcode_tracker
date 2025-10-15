@@ -43,8 +43,12 @@ SECRET_KEY = 'django-insecure--jbf53@=+tri!#!jr7qzdo)-ij(r2g@o)hetmej4p3aq22k2kf
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'leetcode-tracker-th3d.onrender.com',
+    '.onrender.com',  # This allows all Render subdomains
+]
 
 # Application definition
 
