@@ -8,7 +8,7 @@ from .models import TrackedUser
 
 
 class LeetCodeAPI:
-    TIMEOUT = 25
+    TIMEOUT = 30
 
     @staticmethod
     async def fetch_user_data(username: str):
@@ -23,13 +23,14 @@ class LeetCodeAPI:
         async with aiohttp.ClientSession(timeout=timeout) as session:
             # ===== FETCH PROFILE DATA =====
             profile_endpoints = [
+                f"https://leetcode-stats-api.herokuapp.com/{username}",
                 f"https://alfa-leetcode-api.onrender.com/userProfile/{username}",
                 f"https://alfa-leetcode-api.onrender.com/{username}",
             ]
             
             for endpoint in profile_endpoints:
                 try:
-                    async with session.get(endpoint) as response:
+                    async with session.get(endpoint, timeout=aiohttp.ClientTimeout(total=20)) as response:
                         if response.status == 200:
                             profile_data = await response.json()
                             api_used = endpoint
@@ -45,20 +46,64 @@ class LeetCodeAPI:
             # ===== FETCH RECENT SUBMISSIONS =====
             submission_endpoints = [
                 f"https://alfa-leetcode-api.onrender.com/{username}/submission",
-                f"https://alfa-leetcode-api.onrender.com/userProfileUserQuestionProgressV2/{username}",
+                f"https://alfa-leetcode-api.onrender.com/{username}/acSubmission",
             ]
             
             for sub_endpoint in submission_endpoints:
                 try:
-                    async with session.get(sub_endpoint, timeout=aiohttp.ClientTimeout(total=15)) as sub_response:
+                    async with session.get(sub_endpoint, timeout=aiohttp.ClientTimeout(total=20)) as sub_response:
                         if sub_response.status == 200:
-                            submissions_data = await sub_response.json()
-                            if submissions_data:
+                            temp_data = await sub_response.json()
+                            if temp_data and isinstance(temp_data, dict) and 'submission' in temp_data:
+                                submissions_data = temp_data
+                                print(f"✅ Submissions fetched from: {sub_endpoint}")
+                                break
+                            elif temp_data and isinstance(temp_data, list) and len(temp_data) > 0:
+                                submissions_data = {'submission': temp_data}
                                 print(f"✅ Submissions fetched from: {sub_endpoint}")
                                 break
                 except Exception as e:
                     print(f"❌ Failed to fetch submissions from {sub_endpoint}: {e}")
                     continue
+            
+            # GraphQL fallback for submissions
+            if not submissions_data:
+                try:
+                    graphql_query = {
+                        "query": """
+                            query recentSubmissions($username: String!, $limit: Int!) {
+                                recentSubmissionList(username: $username, limit: $limit) {
+                                    title
+                                    titleSlug
+                                    timestamp
+                                    statusDisplay
+                                    lang
+                                }
+                            }
+                        """,
+                        "variables": {"username": username, "limit": 20}
+                    }
+                    
+                    headers = {
+                        'Content-Type': 'application/json',
+                        'Referer': 'https://leetcode.com'
+                    }
+                    
+                    async with session.post(
+                        "https://leetcode.com/graphql",
+                        json=graphql_query,
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=15)
+                    ) as graphql_response:
+                        if graphql_response.status == 200:
+                            graphql_data = await graphql_response.json()
+                            if 'data' in graphql_data and 'recentSubmissionList' in graphql_data['data']:
+                                submissions_data = {
+                                    'submission': graphql_data['data']['recentSubmissionList']
+                                }
+                                print(f"✅ Submissions fetched from GraphQL")
+                except Exception as e:
+                    print(f"❌ GraphQL submission fetch failed: {e}")
             
             # ===== FETCH CONTEST DATA =====
             contest_endpoints = [
@@ -70,10 +115,17 @@ class LeetCodeAPI:
                 try:
                     async with session.get(contest_endpoint, timeout=aiohttp.ClientTimeout(total=15)) as contest_response:
                         if contest_response.status == 200:
-                            contest_data = await contest_response.json()
-                            if contest_data and isinstance(contest_data, dict):
-                                if any(key in contest_data for key in ['rating', 'contestRating', 'userContestRanking', 'attendedContestsCount']):
+                            temp_contest_data = await contest_response.json()
+                            if temp_contest_data and isinstance(temp_contest_data, dict):
+                                # Accept contest data if it has expected keys or is non-empty
+                                if any(key in temp_contest_data for key in ['rating', 'contestRating', 'userContestRanking', 'attendedContestsCount']):
+                                    contest_data = temp_contest_data
                                     print(f"✅ Contest data fetched from: {contest_endpoint}")
+                                    break
+                                else:
+                                    # Even if structure is different, still try to use it
+                                    contest_data = temp_contest_data
+                                    print(f"⚠️ Contest data fetched but structure different: {contest_endpoint}")
                                     break
                 except Exception as e:
                     print(f"❌ Failed to fetch contest from {contest_endpoint}: {e}")
@@ -186,72 +238,127 @@ def parse_user_stats(user_data: dict) -> dict:
             profile["submissionCalendar"]
         )
 
-    # ===== IMPROVED RECENT SUBMISSIONS EXTRACTION =====
+    # ===== RECENT SUBMISSIONS EXTRACTION =====
     recent_submissions = []
     
     print(f"\n🔍 Debug Submissions for {user_data.get('username')}:")
-    print(f"Submissions type: {type(submissions)}")
     
-    # Method 1: Check if submissions is a dict with 'submission' key
+    # Method 1: submissions dict with 'submission' key
     if isinstance(submissions, dict) and 'submission' in submissions:
         sub_list = submissions['submission']
         if isinstance(sub_list, list):
-            for sub in sub_list[:10]:
+            for sub in sub_list[:20]:
                 recent_submissions.append({
                     "title": sub.get("title", sub.get("titleSlug", "Unknown")),
-                    "status": sub.get("statusDisplay", "Unknown"),
+                    "status": sub.get("statusDisplay", sub.get("status", "Unknown")),
                     "timestamp": sub.get("timestamp", ""),
                     "lang": sub.get("lang", "N/A")
                 })
             print(f"✅ Method 1: Found {len(recent_submissions)} submissions")
     
-    # Method 2: Check if submissions is directly a list
+    # Method 2: submissions is directly a list
     elif isinstance(submissions, list):
-        for sub in submissions[:10]:
+        for sub in submissions[:20]:
             recent_submissions.append({
                 "title": sub.get("title", sub.get("titleSlug", "Unknown")),
-                "status": sub.get("statusDisplay", "Unknown"),
+                "status": sub.get("statusDisplay", sub.get("status", "Unknown")),
                 "timestamp": sub.get("timestamp", ""),
                 "lang": sub.get("lang", "N/A")
             })
         print(f"✅ Method 2: Found {len(recent_submissions)} submissions")
     
     # Method 3: Check recentSubmissions in profile
-    elif "recentSubmissions" in profile:
+    if not recent_submissions and "recentSubmissions" in profile:
         submissions_from_profile = profile["recentSubmissions"]
         if isinstance(submissions_from_profile, list):
-            for sub in submissions_from_profile[:10]:
+            for sub in submissions_from_profile[:20]:
                 recent_submissions.append({
                     "title": sub.get("title", sub.get("titleSlug", "Unknown")),
-                    "status": sub.get("statusDisplay", "Unknown"),
+                    "status": sub.get("statusDisplay", sub.get("status", "Unknown")),
                     "timestamp": sub.get("timestamp", ""),
                     "lang": sub.get("lang", "N/A")
                 })
             print(f"✅ Method 3: Found {len(recent_submissions)} submissions")
     
+    # Method 4: Check for recentAcSubmissionList
+    if not recent_submissions and "recentAcSubmissionList" in profile:
+        ac_submissions = profile["recentAcSubmissionList"]
+        if isinstance(ac_submissions, list):
+            for sub in ac_submissions[:20]:
+                recent_submissions.append({
+                    "title": sub.get("title", sub.get("titleSlug", "Unknown")),
+                    "status": "Accepted",
+                    "timestamp": sub.get("timestamp", ""),
+                    "lang": sub.get("lang", "N/A")
+                })
+            print(f"✅ Method 4: Found {len(recent_submissions)} AC submissions")
+    
     if not recent_submissions:
-        print(f"❌ No submissions found. Submissions data: {submissions}")
+        print(f"❌ No submissions found")
+    else:
+        print(f"✅ Total submissions extracted: {len(recent_submissions)}")
 
-    # ===== CONTEST INFO EXTRACTION =====
+    # ===== IMPROVED CONTEST INFO EXTRACTION =====
     contest_rating = "N/A"
     contests_attended = 0
 
+    print(f"\n🏆 Debug Contest Data for {user_data.get('username')}:")
+    print(f"Contest object: {contest}")
+    print(f"Profile object keys: {profile.keys() if profile else 'None'}")
+
+    # Helper function to safely convert to float and check if valid
+    def safe_float(value):
+        """Safely convert to float, return None if invalid"""
+        if value is None:
+            return None
+        try:
+            val = float(value)
+            return val if val > 0 else None
+        except (ValueError, TypeError):
+            return None
+
+    # Try ALL possible methods to extract contest rating
     extraction_methods = [
+        # Method 1: Direct rating field in contest data
         lambda: (
-            round(float(contest.get("rating")), 2) if contest.get("rating") else None,
-            int(contest.get("attendedContestsCount", 0))
+            safe_float(contest.get("rating")) if contest else None,
+            int(contest.get("attendedContestsCount", 0)) if contest and contest.get("attendedContestsCount") else 0
         ),
+        # Method 2: contestRating field in contest data
         lambda: (
-            round(float(contest.get("contestRating")), 2) if contest.get("contestRating") else None,
-            int(contest.get("contestAttend", 0))
+            safe_float(contest.get("contestRating")) if contest else None,
+            int(contest.get("contestAttend", 0)) if contest and contest.get("contestAttend") else 0
         ),
+        # Method 3: userContestRanking nested object in contest
         lambda: (
-            round(float(contest.get("userContestRanking", {}).get("rating")), 2) if contest.get("userContestRanking", {}).get("rating") else None,
-            int(contest.get("userContestRanking", {}).get("attendedContestsCount", 0))
+            safe_float(contest.get("userContestRanking", {}).get("rating")) if contest and contest.get("userContestRanking") else None,
+            int(contest.get("userContestRanking", {}).get("attendedContestsCount", 0)) if contest and contest.get("userContestRanking") else 0
         ),
+        # Method 4: From profile object (direct contestRating)
         lambda: (
-            round(float(profile.get("contestRating")), 2) if profile.get("contestRating") else None,
-            int(profile.get("contestAttend", 0))
+            safe_float(profile.get("contestRating")) if profile else None,
+            int(profile.get("contestAttend", 0)) if profile and profile.get("contestAttend") else 0
+        ),
+        # Method 5: From profile object (userContestRanking)
+        lambda: (
+            safe_float(profile.get("userContestRanking", {}).get("rating")) if profile and profile.get("userContestRanking") else None,
+            int(profile.get("userContestRanking", {}).get("attendedContestsCount", 0)) if profile and profile.get("userContestRanking") else 0
+        ),
+        # Method 6: userContestRankingHistory array (get latest attended or highest rating)
+        lambda: (
+            safe_float(
+                next(
+                    (h.get("rating") for h in reversed(profile.get("userContestRankingHistory", [])) 
+                     if h.get("attended")),
+                    profile.get("userContestRankingHistory", [{}])[-1].get("rating") if profile.get("userContestRankingHistory") else None
+                )
+            ) if profile and profile.get("userContestRankingHistory") else None,
+            sum(1 for h in profile.get("userContestRankingHistory", []) if h.get("attended")) if profile and profile.get("userContestRankingHistory") else 0
+        ),
+        # Method 7: Fallback - Any contest data from profile that might have been missed
+        lambda: (
+            safe_float(profile.get("ratingInfo", {}).get("rating")) if profile and profile.get("ratingInfo") else None,
+            int(profile.get("ratingInfo", {}).get("attendedContestsCount", 0)) if profile and profile.get("ratingInfo") else 0
         ),
     ]
 
@@ -259,11 +366,19 @@ def parse_user_stats(user_data: dict) -> dict:
         try:
             rating, attended = method()
             if rating is not None and rating > 0:
-                contest_rating = rating
+                contest_rating = round(rating, 2)
                 contests_attended = attended
+                print(f"✅ Method {i} SUCCESS: Rating={contest_rating}, Attended={attended}")
                 break
-        except (ValueError, TypeError, KeyError, AttributeError):
+            else:
+                print(f"❌ Method {i} returned None or <= 0 (rating={rating}, attended={attended})")
+        except (ValueError, TypeError, KeyError, AttributeError, IndexError) as e:
+            print(f"❌ Method {i} failed with exception: {type(e).__name__}: {e}")
             continue
+    else:
+        print(f"⚠️  All extraction methods failed. Contest rating remains '{contest_rating}', attended={contests_attended}")
+
+    print(f"Final Contest Rating: {contest_rating}, Attended: {contests_attended}\n")
 
     return {
         "username": user_data.get("username", "Unknown"),

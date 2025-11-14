@@ -138,10 +138,6 @@
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
         }
 
-        .search-btn:active {
-            transform: translateY(0);
-        }
-
         /* Controls */
         .controls {
             display: flex;
@@ -363,7 +359,7 @@
             text-align: right;
         }
 
-        /* Last Activity */
+        /* Last Activity - UPDATED */
         .last-activity {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -375,7 +371,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
         .activity-label {
@@ -390,6 +386,10 @@
             font-weight: 600;
         }
 
+        .activity-content {
+            margin-bottom: 6px;
+        }
+
         .activity-problem {
             font-size: 14px;
             font-weight: 600;
@@ -397,12 +397,17 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            margin-bottom: 4px;
+        }
+
+        .activity-meta {
+            font-size: 12px;
+            color: #64748b;
         }
 
         .activity-status {
             display: inline-block;
-            margin-top: 4px;
-            padding: 2px 8px;
+            padding: 3px 10px;
             background: #dcfce7;
             color: #16a34a;
             border-radius: 4px;
@@ -413,6 +418,17 @@
         .activity-status.wrong {
             background: #fee2e2;
             color: #dc2626;
+        }
+
+        .activity-status.pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .no-activity {
+            font-size: 13px;
+            color: #94a3b8;
+            font-style: italic;
         }
 
         /* Badges */
@@ -692,13 +708,15 @@
                             </div>
                         </div>
 
-                        <!-- Last Activity -->
-                        <div class="last-activity">
+                        <!-- Last Activity - Shows only ONE submission -->
+                        <div class="last-activity" data-username="{{ user.username }}">
                             <div class="activity-header">
-                                <span class="activity-label">Last Activity</span>
-                                <span class="activity-time" data-timestamp="{{ user.last_updated|date:'c' }}">Loading...</span>
+                                <span class="activity-label">📝 Last Submission</span>
+                                <span class="activity-time">Loading...</span>
                             </div>
-                            <div class="activity-problem">No recent activity</div>
+                            <div class="activity-content">
+                                <div class="no-activity">No recent activity</div>
+                            </div>
                         </div>
 
                         <!-- Badges -->
@@ -731,7 +749,6 @@
             <div class="user-grid">
                 {% if featured_users %}
                     {% for user in featured_users %}
-                    <!-- Same card structure as above -->
                     <a href="/profile/{{ user.username }}/" class="user-card">
                         <div class="user-card-header">
                             <div class="user-avatar">{{ user.display_name.0|upper|default:user.username.0|upper }}</div>
@@ -801,7 +818,7 @@
         function getRelativeTime(timestamp) {
             const now = new Date();
             const then = new Date(timestamp);
-            const diff = Math.floor((now - then) / 1000); // difference in seconds
+            const diff = Math.floor((now - then) / 1000);
 
             if (diff < 60) return 'Just now';
             if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
@@ -812,14 +829,51 @@
             return `${Math.floor(diff / 2592000)} months ago`;
         }
 
-        // Update all timestamps
-        function updateTimestamps() {
-            document.querySelectorAll('.activity-time').forEach(el => {
-                const timestamp = el.getAttribute('data-timestamp');
-                if (timestamp) {
-                    el.textContent = getRelativeTime(timestamp);
+        // Load Last Submission for Each User - ONLY ONE SUBMISSION
+        async function loadLastSubmissions() {
+            const activityCards = document.querySelectorAll('.last-activity');
+            
+            for (const card of activityCards) {
+                const username = card.getAttribute('data-username');
+                if (!username) continue;
+                
+                try {
+                    const response = await fetch(`/api/user/${username}/`);
+                    const data = await response.json();
+                    
+                    const timeEl = card.querySelector('.activity-time');
+                    const contentEl = card.querySelector('.activity-content');
+                    
+                    if (data.recent_submissions && data.recent_submissions.length > 0) {
+                        // GET ONLY THE FIRST (MOST RECENT) SUBMISSION
+                        const latest = data.recent_submissions[0];
+                        
+                        const timeAgo = latest.timestamp ? 
+                            getRelativeTime(new Date(latest.timestamp * 1000)) : 
+                            'Unknown time';
+                        
+                        const statusClass = latest.status.toLowerCase().includes('accepted') ? '' : 
+                                          latest.status.toLowerCase().includes('wrong') ? 'wrong' : 'pending';
+                        
+                        const statusIcon = latest.status.toLowerCase().includes('accepted') ? '✓' : 
+                                         latest.status.toLowerCase().includes('wrong') ? '✗' : '⏳';
+                        
+                        timeEl.textContent = timeAgo;
+                        contentEl.innerHTML = `
+                            <div class="activity-problem">${latest.title}</div>
+                            <div class="activity-meta">
+                                <span class="activity-status ${statusClass}">${statusIcon} ${latest.status}</span>
+                                <span style="margin-left: 8px; color: #94a3b8;">• ${latest.lang}</span>
+                            </div>
+                        `;
+                    } else {
+                        timeEl.textContent = '';
+                        contentEl.innerHTML = '<div class="no-activity">No recent submissions</div>';
+                    }
+                } catch (error) {
+                    console.error(`Error loading submission for ${username}:`, error);
                 }
-            });
+            }
         }
 
         // Load Users with API
@@ -835,7 +889,7 @@
                 const data = await response.json();
 
                 if (data.users && data.users.length > 0) {
-                    renderUsers(data.users);
+                    await renderUsers(data.users);
                     updateStats(data);
                 }
             } catch (error) {
@@ -846,32 +900,11 @@
             }
         }
 
-        // Render Users
+        // Render Users - SHOWS ONLY ONE SUBMISSION
         async function renderUsers(users) {
             const grid = document.getElementById('usersGrid');
             
-            const userCards = await Promise.all(users.map(async user => {
-                // Fetch recent submission for each user
-                let lastActivity = 'No recent activity';
-                let lastTime = '';
-                let activityStatus = '';
-                
-                try {
-                    const response = await fetch(`/api/user/${user.username}/`);
-                    const userData = await response.json();
-                    
-                    if (userData.recent_submissions && userData.recent_submissions.length > 0) {
-                        const latest = userData.recent_submissions[0];
-                        lastActivity = latest.title || 'Unknown problem';
-                        lastTime = latest.timestamp ? getRelativeTime(new Date(latest.timestamp * 1000)) : '';
-                        activityStatus = latest.status.toLowerCase().includes('accepted') ? 
-                            '<span class="activity-status">✓ Accepted</span>' : 
-                            '<span class="activity-status wrong">✗ Wrong Answer</span>';
-                    }
-                } catch (e) {
-                    console.error('Error fetching user data:', e);
-                }
-
+            const userCardsHTML = users.map(user => {
                 const total = user.total_solved || 1;
                 const easyPercent = Math.round((user.easy / total) * 100);
                 const mediumPercent = Math.round((user.medium / total) * 100);
@@ -933,13 +966,14 @@
                                 <span class="difficulty-count">${user.hard}</span>
                             </div>
                         </div>
-                        <div class="last-activity">
+                        <div class="last-activity" data-username="${user.username}">
                             <div class="activity-header">
-                                <span class="activity-label">Last Submission</span>
-                                <span class="activity-time">${lastTime}</span>
+                                <span class="activity-label">📝 Last Submission</span>
+                                <span class="activity-time">Loading...</span>
                             </div>
-                            <div class="activity-problem">${lastActivity}</div>
-                            ${activityStatus}
+                            <div class="activity-content">
+                                <div class="no-activity">Loading...</div>
+                            </div>
                         </div>
                         <div class="badges">
                             ${user.is_featured ? '<span class="badge featured">⭐ Featured</span>' : ''}
@@ -948,9 +982,12 @@
                         </div>
                     </a>
                 `;
-            }));
+            }).join('');
 
-            grid.innerHTML = userCards.join('');
+            grid.innerHTML = userCardsHTML;
+            
+            // Load submissions AFTER rendering cards
+            await loadLastSubmissions();
         }
 
         // Update Statistics
@@ -960,10 +997,10 @@
             document.getElementById('totalProblems').textContent = totalProblems.toLocaleString();
         }
 
-        // Initialize
+        // Initialize - Load submissions on page load
         document.addEventListener('DOMContentLoaded', () => {
-            updateTimestamps();
-            setInterval(updateTimestamps, 60000); // Update every minute
+            loadLastSubmissions();
+            setInterval(loadLastSubmissions, 300000); // Refresh every 5 minutes
         });
     </script>
 </body>

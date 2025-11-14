@@ -46,8 +46,14 @@ class TrackedUser(models.Model):
         self.hard_solved = stats_data.get('hard', 0)
         self.ranking = stats_data.get('ranking') if stats_data.get('ranking') != 'N/A' else None
         
+        # Update contest rating - ensure it's stored as a number or None
         contest_rating = stats_data.get('contest_rating')
-        if contest_rating != 'N/A':
-            self.contest_rating = contest_rating
+        if contest_rating != 'N/A' and contest_rating is not None:
+            try:
+                self.contest_rating = float(contest_rating) if contest_rating != 'N/A' else None
+            except (ValueError, TypeError):
+                self.contest_rating = None
+        else:
+            self.contest_rating = None
         
         self.save()
