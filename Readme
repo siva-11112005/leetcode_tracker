@@ -1,0 +1,56 @@
+# 📊 LeetCode Tracker
+
+Track and compare LeetCode profiles with beautiful visualizations.
+
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Django](https://img.shields.io/badge/Django-5.2-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
+## 🚀 Features
+
+- 🔍 Search any LeetCode user profile
+- 📊 Visual statistics with difficulty breakdowns
+- 🏆 Global rankings and contest ratings
+- ⏱️ Recent submissions with timestamps
+- 📱 Responsive design
+- 💾 Automatic user tracking
+
+## 🛠️ Tech Stack
+
+- Django 5.2
+- Python 3.11
+- SQLite Database
+- Alfa LeetCode API
+- WhiteNoise for static files
+- Gunicorn WSGI server
+
+## 📦 Installation
+
+### Local Development
+
+```bash
+# Clone repository
+git clone https://github.com/siva-11112005/leetcode_tracker.git
+cd leetcode_tracker
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run migrations
+python manage.py makemigrations
+python manage.py migrate
+
+# Create superuser (optional)
+python manage.py createsuperuser
+
+# Run development server
+python manage.py runserver

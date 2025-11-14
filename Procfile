@@ -1,0 +1,1 @@
+web: gunicorn leetcode_tracker.wsgi --log-file -

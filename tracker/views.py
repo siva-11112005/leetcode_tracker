@@ -1,395 +1,99 @@
-# import asyncio
-# import aiohttp
-# from django.shortcuts import render
-# from django.http import JsonResponse
-# from datetime import datetime, timedelta
-# import json
-
-# class LeetCodeAPI:
-#     BASE_URL = "https://leetcode-api-pied.vercel.app"
-#     TIMEOUT = 15
-    
-#     @staticmethod
-#     async def fetch_user_data(username: str):
-#         """Fetch comprehensive user data from LeetCode API"""
-#         timeout = aiohttp.ClientTimeout(total=LeetCodeAPI.TIMEOUT)
-        
-#         try:
-#             async with aiohttp.ClientSession(timeout=timeout) as session:
-#                 # Fetch user profile
-#                 async with session.get(f"{LeetCodeAPI.BASE_URL}/user/{username}") as response:
-#                     if response.status != 200:
-#                         return {"error": f"User not found (Status: {response.status})", "username": username}
-#                     profile_data = await response.json()
-                
-#                 # Fetch submissions
-#                 async with session.get(f"{LeetCodeAPI.BASE_URL}/user/{username}/submissions?limit=100") as response:
-#                     submissions_data = await response.json() if response.status == 200 else None
-                
-#                 # Fetch contests
-#                 async with session.get(f"{LeetCodeAPI.BASE_URL}/user/{username}/contests") as response:
-#                     contests_data = await response.json() if response.status == 200 else None
-                
-#                 return {
-#                     "username": username,
-#                     "profile": profile_data,
-#                     "submissions": submissions_data,
-#                     "contests": contests_data,
-#                     "error": None
-#                 }
-#         except asyncio.TimeoutError:
-#             return {"error": "Request timeout", "username": username}
-#         except Exception as e:
-#             return {"error": str(e), "username": username}
-
-# def parse_user_stats(user_data: dict) -> dict:
-#     """Parse and organize user statistics"""
-#     if user_data.get("error"):
-#         return {
-#             "username": user_data.get("username", "Unknown"),
-#             "error": user_data["error"],
-#             "total_solved": 0,
-#             "easy": 0,
-#             "medium": 0,
-#             "hard": 0,
-#         }
-    
-#     profile = user_data.get("profile", {})
-#     submissions = user_data.get("submissions", {})
-#     contests = user_data.get("contests", {})
-    
-#     # Extract display name
-#     display_name = user_data.get("username", "Unknown")
-#     if "profile" in profile and isinstance(profile["profile"], dict):
-#         nested_profile = profile["profile"]
-#         if "realName" in nested_profile and nested_profile["realName"]:
-#             display_name = nested_profile["realName"]
-    
-#     # Extract problem counts
-#     total_solved = profile.get("totalSolved", 0)
-#     easy_solved = profile.get("easySolved", 0)
-#     medium_solved = profile.get("mediumSolved", 0)
-#     hard_solved = profile.get("hardSolved", 0)
-    
-#     # Extract ranking
-#     ranking = "N/A"
-#     if "ranking" in profile and profile["ranking"] is not None:
-#         ranking = profile["ranking"]
-#     elif "profile" in profile and isinstance(profile["profile"], dict):
-#         nested = profile["profile"]
-#         if "ranking" in nested and nested["ranking"] is not None:
-#             ranking = nested["ranking"]
-    
-#     # Extract streak info
-#     max_streak = 0
-#     if "userCalendar" in profile:
-#         calendar = profile.get("userCalendar", {})
-#         if isinstance(calendar, dict):
-#             max_streak = calendar.get("streak", 0)
-    
-#     # Recent submissions
-#     recent_submissions = []
-#     if submissions:
-#         sub_list = submissions if isinstance(submissions, list) else submissions.get("submission", [])
-#         for sub in sub_list[:10]:  # Get last 10 submissions
-#             recent_submissions.append({
-#                 "title": sub.get("title", "Unknown"),
-#                 "status": sub.get("statusDisplay", "Unknown"),
-#                 "timestamp": sub.get("timestamp"),
-#                 "lang": sub.get("lang", "N/A")
-#             })
-    
-#     # Contest info
-#     contest_rating = "N/A"
-#     contests_attended = 0
-#     if contests:
-#         contest_ranking = contests.get("userContestRanking", {})
-#         if contest_ranking:
-#             rating = contest_ranking.get("rating")
-#             if rating:
-#                 contest_rating = round(rating, 2)
-#             contests_attended = contest_ranking.get("attendedContestsCount", 0)
-    
-#     return {
-#         "username": user_data.get("username", "Unknown"),
-#         "display_name": display_name,
-#         "error": None,
-#         "ranking": ranking,
-#         "total_solved": total_solved,
-#         "easy": easy_solved,
-#         "medium": medium_solved,
-#         "hard": hard_solved,
-#         "max_streak": max_streak,
-#         "contest_rating": contest_rating,
-#         "contests_attended": contests_attended,
-#         "recent_submissions": recent_submissions,
-#     }
-
-# def home(request):
-#     """Home page view"""
-#     return render(request, 'tracker/home.html')
-
-# def profile(request, username):
-#     """Profile page view"""
-#     return render(request, 'tracker/profile.html', {'username': username})
-
-# async def get_user_data(username: str):
-#     """Async helper to fetch user data"""
-#     data = await LeetCodeAPI.fetch_user_data(username)
-#     return parse_user_stats(data)
-
-# def api_user_data(request, username):
-#     """API endpoint to fetch user data"""
-#     try:
-#         # Run async function in sync context
-#         loop = asyncio.new_event_loop()
-#         asyncio.set_event_loop(loop)
-#         user_stats = loop.run_until_complete(get_user_data(username))
-#         loop.close()
-        
-#         return JsonResponse(user_stats)
-#     except Exception as e:
-#         return JsonResponse({"error": str(e)}, status=500)
-
-# import asyncio
-# import aiohttp
-# from django.shortcuts import render
-# from django.http import JsonResponse
-# from datetime import datetime, timedelta
-
-# class LeetCodeAPI:
-#     BASE_URL = "https://leetcode-api-pied.vercel.app"
-#     TIMEOUT = 15
-    
-#     @staticmethod
-#     async def fetch_user_data(username: str):
-#         """Fetch comprehensive user data from LeetCode API"""
-#         timeout = aiohttp.ClientTimeout(total=LeetCodeAPI.TIMEOUT)
-        
-#         try:
-#             async with aiohttp.ClientSession(timeout=timeout) as session:
-#                 # Fetch user profile
-#                 async with session.get(f"{LeetCodeAPI.BASE_URL}/{username}") as response:
-#                     if response.status != 200:
-#                         return {"error": f"User not found (Status: {response.status})", "username": username}
-#                     profile_data = await response.json()
-                
-#                 return {
-#                     "username": username,
-#                     "profile": profile_data,
-#                     "error": None
-#                 }
-#         except asyncio.TimeoutError:
-#             return {"error": "Request timeout", "username": username}
-#         except Exception as e:
-#             return {"error": str(e), "username": username}
-
-# def parse_user_stats(user_data: dict) -> dict:
-#     """Parse and organize user statistics"""
-#     if user_data.get("error"):
-#         return {
-#             "username": user_data.get("username", "Unknown"),
-#             "display_name": user_data.get("username", "Unknown"),
-#             "error": user_data["error"],
-#             "total_solved": 0,
-#             "easy": 0,
-#             "medium": 0,
-#             "hard": 0,
-#             "ranking": "N/A",
-#             "max_streak": 0,
-#             "contest_rating": "N/A",
-#             "contests_attended": 0,
-#             "recent_submissions": [],
-#             "acceptance_rate": 0,
-#         }
-    
-#     profile = user_data.get("profile", {})
-    
-#     # Extract display name - try multiple locations
-#     display_name = user_data.get("username", "Unknown")
-#     if "name" in profile and profile["name"]:
-#         display_name = profile["name"]
-#     elif "realName" in profile and profile["realName"]:
-#         display_name = profile["realName"]
-    
-#     # Extract problem counts - CHECK MULTIPLE POSSIBLE API STRUCTURES
-#     total_solved = 0
-#     easy_solved = 0
-#     medium_solved = 0
-#     hard_solved = 0
-    
-#     # Method 1: Direct fields (most common in this API)
-#     if "totalSolved" in profile:
-#         total_solved = profile.get("totalSolved", 0)
-#         easy_solved = profile.get("easySolved", 0)
-#         medium_solved = profile.get("mediumSolved", 0)
-#         hard_solved = profile.get("hardSolved", 0)
-    
-#     # Method 2: Check submitStats
-#     elif "submitStats" in profile:
-#         submit_stats = profile["submitStats"]
-#         if "acSubmissionNum" in submit_stats:
-#             ac_submissions = submit_stats["acSubmissionNum"]
-#             if isinstance(ac_submissions, list) and len(ac_submissions) > 0:
-#                 # Index 0 is usually "All"
-#                 if len(ac_submissions) > 0:
-#                     total_solved = ac_submissions[0].get("count", 0)
-#                 if len(ac_submissions) > 1:
-#                     easy_solved = ac_submissions[1].get("count", 0)
-#                 if len(ac_submissions) > 2:
-#                     medium_solved = ac_submissions[2].get("count", 0)
-#                 if len(ac_submissions) > 3:
-#                     hard_solved = ac_submissions[3].get("count", 0)
-    
-#     # Method 3: Check submitStatsGlobal
-#     elif "submitStatsGlobal" in profile:
-#         stats = profile["submitStatsGlobal"]
-#         if "acSubmissionNum" in stats:
-#             ac_submissions = stats["acSubmissionNum"]
-#             if isinstance(ac_submissions, list) and len(ac_submissions) > 0:
-#                 if len(ac_submissions) > 0:
-#                     total_solved = ac_submissions[0].get("count", 0)
-#                 if len(ac_submissions) > 1:
-#                     easy_solved = ac_submissions[1].get("count", 0)
-#                 if len(ac_submissions) > 2:
-#                     medium_solved = ac_submissions[2].get("count", 0)
-#                 if len(ac_submissions) > 3:
-#                     hard_solved = ac_submissions[3].get("count", 0)
-    
-#     # Extract ranking
-#     ranking = "N/A"
-#     if "ranking" in profile and profile["ranking"] is not None:
-#         ranking = profile["ranking"]
-    
-#     # Extract streak info
-#     max_streak = 0
-#     current_streak = 0
-    
-#     if "streak" in profile:
-#         max_streak = profile.get("streak", 0)
-    
-#     if "userCalendar" in profile:
-#         calendar = profile.get("userCalendar", {})
-#         if isinstance(calendar, dict):
-#             max_streak = calendar.get("streak", max_streak)
-#             current_streak = calendar.get("currentStreak", 0)
-    
-#     # Recent submissions
-#     recent_submissions = []
-#     if "recentSubmissions" in profile:
-#         submissions = profile.get("recentSubmissions", [])
-#         if isinstance(submissions, list):
-#             for sub in submissions[:10]:
-#                 recent_submissions.append({
-#                     "title": sub.get("title", "Unknown"),
-#                     "status": sub.get("statusDisplay", sub.get("status", "Unknown")),
-#                     "timestamp": sub.get("timestamp", ""),
-#                     "lang": sub.get("lang", "N/A")
-#                 })
-    
-#     # Contest info
-#     contest_rating = "N/A"
-#     contests_attended = 0
-    
-#     if "contestRating" in profile:
-#         rating = profile.get("contestRating")
-#         if rating:
-#             contest_rating = round(rating, 2)
-    
-#     if "contestAttend" in profile:
-#         contests_attended = profile.get("contestAttend", 0)
-    
-#     # Calculate acceptance rate
-#     acceptance_rate = 0
-#     if "acceptanceRate" in profile:
-#         acceptance_rate = round(profile.get("acceptanceRate", 0), 1)
-    
-#     return {
-#         "username": user_data.get("username", "Unknown"),
-#         "display_name": display_name,
-#         "error": None,
-#         "ranking": ranking,
-#         "total_solved": total_solved,
-#         "easy": easy_solved,
-#         "medium": medium_solved,
-#         "hard": hard_solved,
-#         "max_streak": max_streak,
-#         "current_streak": current_streak,
-#         "contest_rating": contest_rating,
-#         "contests_attended": contests_attended,
-#         "recent_submissions": recent_submissions,
-#         "acceptance_rate": acceptance_rate,
-#     }
-
-# def home(request):
-#     """Home page view"""
-#     return render(request, 'tracker/home.html')
-
-# def profile(request, username):
-#     """Profile page view"""
-#     return render(request, 'tracker/profile.html', {'username': username})
-
-# async def get_user_data(username: str):
-#     """Async helper to fetch user data"""
-#     data = await LeetCodeAPI.fetch_user_data(username)
-#     return parse_user_stats(data)
-
-# def api_user_data(request, username):
-#     """API endpoint to fetch user data"""
-#     try:
-#         # Run async function in sync context
-#         loop = asyncio.new_event_loop()
-#         asyncio.set_event_loop(loop)
-#         user_stats = loop.run_until_complete(get_user_data(username))
-#         loop.close()
-        
-#         return JsonResponse(user_stats)
-#     except Exception as e:
-#         return JsonResponse({"error": str(e)}, status=500)
-
 import asyncio
 import aiohttp
 from django.shortcuts import render
 from django.http import JsonResponse
+from django.db.models import Q
 from datetime import datetime, timedelta
+from .models import TrackedUser
+
 
 class LeetCodeAPI:
-    TIMEOUT = 15
-    
+    TIMEOUT = 25
+
     @staticmethod
     async def fetch_user_data(username: str):
         """Fetch comprehensive user data from LeetCode API"""
         timeout = aiohttp.ClientTimeout(total=LeetCodeAPI.TIMEOUT)
         
-        endpoints_to_try = [
-            f"https://alfa-leetcode-api.onrender.com/userProfile/{username}",
-            f"https://alfa-leetcode-api.onrender.com/{username}",
-            f"https://leetcode-stats-api.herokuapp.com/{username}",
-        ]
+        profile_data = None
+        submissions_data = None
+        contest_data = None
+        api_used = None
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            for endpoint in endpoints_to_try:
+            # ===== FETCH PROFILE DATA =====
+            profile_endpoints = [
+                f"https://alfa-leetcode-api.onrender.com/userProfile/{username}",
+                f"https://alfa-leetcode-api.onrender.com/{username}",
+            ]
+            
+            for endpoint in profile_endpoints:
                 try:
                     async with session.get(endpoint) as response:
                         if response.status == 200:
                             profile_data = await response.json()
-                            return {
-                                "username": username,
-                                "profile": profile_data,
-                                "error": None,
-                                "api_used": endpoint
-                            }
-                except Exception:
+                            api_used = endpoint
+                            print(f"✅ Profile fetched from: {endpoint}")
+                            break
+                except Exception as e:
+                    print(f"❌ Failed to fetch profile from {endpoint}: {e}")
                     continue
             
-            return {"error": f"User '{username}' not found", "username": username}
+            if not profile_data:
+                return {"error": f"User '{username}' not found", "username": username}
+            
+            # ===== FETCH RECENT SUBMISSIONS =====
+            submission_endpoints = [
+                f"https://alfa-leetcode-api.onrender.com/{username}/submission",
+                f"https://alfa-leetcode-api.onrender.com/userProfileUserQuestionProgressV2/{username}",
+            ]
+            
+            for sub_endpoint in submission_endpoints:
+                try:
+                    async with session.get(sub_endpoint, timeout=aiohttp.ClientTimeout(total=15)) as sub_response:
+                        if sub_response.status == 200:
+                            submissions_data = await sub_response.json()
+                            if submissions_data:
+                                print(f"✅ Submissions fetched from: {sub_endpoint}")
+                                break
+                except Exception as e:
+                    print(f"❌ Failed to fetch submissions from {sub_endpoint}: {e}")
+                    continue
+            
+            # ===== FETCH CONTEST DATA =====
+            contest_endpoints = [
+                f"https://alfa-leetcode-api.onrender.com/userContestRankingInfo/{username}",
+                f"https://alfa-leetcode-api.onrender.com/{username}/contest",
+            ]
+            
+            for contest_endpoint in contest_endpoints:
+                try:
+                    async with session.get(contest_endpoint, timeout=aiohttp.ClientTimeout(total=15)) as contest_response:
+                        if contest_response.status == 200:
+                            contest_data = await contest_response.json()
+                            if contest_data and isinstance(contest_data, dict):
+                                if any(key in contest_data for key in ['rating', 'contestRating', 'userContestRanking', 'attendedContestsCount']):
+                                    print(f"✅ Contest data fetched from: {contest_endpoint}")
+                                    break
+                except Exception as e:
+                    print(f"❌ Failed to fetch contest from {contest_endpoint}: {e}")
+                    continue
+            
+            return {
+                "username": username,
+                "profile": profile_data,
+                "submissions": submissions_data,
+                "contest": contest_data,
+                "error": None,
+                "api_used": api_used
+            }
+
 
 def calculate_streak_from_calendar(submission_calendar):
     """Calculate current and max streak from submission calendar"""
     if not submission_calendar:
         return 0, 0
-    
-    # Convert timestamps to dates
+
     dates = []
     for timestamp_str in submission_calendar.keys():
         try:
@@ -398,24 +102,19 @@ def calculate_streak_from_calendar(submission_calendar):
             dates.append(date)
         except:
             continue
-    
+
     if not dates:
         return 0, 0
-    
-    # Sort dates
+
     dates = sorted(set(dates))
-    
-    # Calculate current streak
     current_streak = 0
     today = datetime.now().date()
     yesterday = today - timedelta(days=1)
-    
-    # Check if user submitted today or yesterday
+
     if today in dates or yesterday in dates:
         current_date = today if today in dates else yesterday
         current_streak = 1
         
-        # Count backwards
         for i in range(1, len(dates)):
             prev_date = current_date - timedelta(days=1)
             if prev_date in dates:
@@ -423,21 +122,21 @@ def calculate_streak_from_calendar(submission_calendar):
                 current_date = prev_date
             else:
                 break
-    
-    # Calculate max streak
+
     max_streak = 0
     temp_streak = 1
-    
+
     for i in range(1, len(dates)):
         if (dates[i] - dates[i-1]).days == 1:
             temp_streak += 1
             max_streak = max(max_streak, temp_streak)
         else:
             temp_streak = 1
-    
+
     max_streak = max(max_streak, temp_streak)
-    
+
     return current_streak, max_streak
+
 
 def parse_user_stats(user_data: dict) -> dict:
     """Parse and organize user statistics"""
@@ -457,73 +156,115 @@ def parse_user_stats(user_data: dict) -> dict:
             "contests_attended": 0,
             "recent_submissions": [],
         }
-    
+
     profile = user_data.get("profile", {})
-    
+    submissions = user_data.get("submissions", {})
+    contest = user_data.get("contest", {})
+
     # Extract display name
     display_name = user_data.get("username", "Unknown")
     if "name" in profile and profile["name"]:
         display_name = profile["name"]
     elif "realName" in profile and profile["realName"]:
         display_name = profile["realName"]
-    
-    # Extract problem counts - use the correct field names from API
+
+    # Extract problem counts
     total_solved = profile.get("totalSolved", 0)
     easy_solved = profile.get("easySolved", 0)
     medium_solved = profile.get("mediumSolved", 0)
     hard_solved = profile.get("hardSolved", 0)
-    
+
     # Extract ranking
     ranking = profile.get("ranking", "N/A")
-    
+
     # Calculate streak from submissionCalendar
     current_streak = 0
     max_streak = 0
-    
+
     if "submissionCalendar" in profile:
         current_streak, max_streak = calculate_streak_from_calendar(
             profile["submissionCalendar"]
         )
-    
-    # Recent submissions - use recentSubmissions field
+
+    # ===== IMPROVED RECENT SUBMISSIONS EXTRACTION =====
     recent_submissions = []
-    if "recentSubmissions" in profile:
-        submissions = profile["recentSubmissions"]
-        if isinstance(submissions, list):
-            for sub in submissions[:10]:
+    
+    print(f"\n🔍 Debug Submissions for {user_data.get('username')}:")
+    print(f"Submissions type: {type(submissions)}")
+    
+    # Method 1: Check if submissions is a dict with 'submission' key
+    if isinstance(submissions, dict) and 'submission' in submissions:
+        sub_list = submissions['submission']
+        if isinstance(sub_list, list):
+            for sub in sub_list[:10]:
                 recent_submissions.append({
-                    "title": sub.get("title", "Unknown"),
+                    "title": sub.get("title", sub.get("titleSlug", "Unknown")),
                     "status": sub.get("statusDisplay", "Unknown"),
                     "timestamp": sub.get("timestamp", ""),
                     "lang": sub.get("lang", "N/A")
                 })
+            print(f"✅ Method 1: Found {len(recent_submissions)} submissions")
     
-    # Contest info - check if available
+    # Method 2: Check if submissions is directly a list
+    elif isinstance(submissions, list):
+        for sub in submissions[:10]:
+            recent_submissions.append({
+                "title": sub.get("title", sub.get("titleSlug", "Unknown")),
+                "status": sub.get("statusDisplay", "Unknown"),
+                "timestamp": sub.get("timestamp", ""),
+                "lang": sub.get("lang", "N/A")
+            })
+        print(f"✅ Method 2: Found {len(recent_submissions)} submissions")
+    
+    # Method 3: Check recentSubmissions in profile
+    elif "recentSubmissions" in profile:
+        submissions_from_profile = profile["recentSubmissions"]
+        if isinstance(submissions_from_profile, list):
+            for sub in submissions_from_profile[:10]:
+                recent_submissions.append({
+                    "title": sub.get("title", sub.get("titleSlug", "Unknown")),
+                    "status": sub.get("statusDisplay", "Unknown"),
+                    "timestamp": sub.get("timestamp", ""),
+                    "lang": sub.get("lang", "N/A")
+                })
+            print(f"✅ Method 3: Found {len(recent_submissions)} submissions")
+    
+    if not recent_submissions:
+        print(f"❌ No submissions found. Submissions data: {submissions}")
+
+    # ===== CONTEST INFO EXTRACTION =====
     contest_rating = "N/A"
     contests_attended = 0
-    
-    # Try to get contest data from profile
-    if "contestRating" in profile and profile["contestRating"]:
+
+    extraction_methods = [
+        lambda: (
+            round(float(contest.get("rating")), 2) if contest.get("rating") else None,
+            int(contest.get("attendedContestsCount", 0))
+        ),
+        lambda: (
+            round(float(contest.get("contestRating")), 2) if contest.get("contestRating") else None,
+            int(contest.get("contestAttend", 0))
+        ),
+        lambda: (
+            round(float(contest.get("userContestRanking", {}).get("rating")), 2) if contest.get("userContestRanking", {}).get("rating") else None,
+            int(contest.get("userContestRanking", {}).get("attendedContestsCount", 0))
+        ),
+        lambda: (
+            round(float(profile.get("contestRating")), 2) if profile.get("contestRating") else None,
+            int(profile.get("contestAttend", 0))
+        ),
+    ]
+
+    for i, method in enumerate(extraction_methods, 1):
         try:
-            contest_rating = round(float(profile["contestRating"]), 2)
-        except:
-            pass
-    
-    if "contestAttend" in profile:
-        contests_attended = profile["contestAttend"]
-    
-    # Check userContestRanking if exists
-    if "userContestRanking" in profile:
-        contest_data = profile["userContestRanking"]
-        if isinstance(contest_data, dict):
-            if "rating" in contest_data and contest_data["rating"]:
-                try:
-                    contest_rating = round(float(contest_data["rating"]), 2)
-                except:
-                    pass
-            if "attendedContestsCount" in contest_data:
-                contests_attended = contest_data["attendedContestsCount"]
-    
+            rating, attended = method()
+            if rating is not None and rating > 0:
+                contest_rating = rating
+                contests_attended = attended
+                break
+        except (ValueError, TypeError, KeyError, AttributeError):
+            continue
+
     return {
         "username": user_data.get("username", "Unknown"),
         "display_name": display_name,
@@ -540,18 +281,56 @@ def parse_user_stats(user_data: dict) -> dict:
         "recent_submissions": recent_submissions,
     }
 
+
+# ============= VIEWS =============
+
 def home(request):
-    """Home page view"""
-    return render(request, 'tracker/home.html')
+    """Home page view - Shows all tracked users with statistics"""
+    tracked_users = TrackedUser.objects.all()[:50]
+    total_users = TrackedUser.objects.count()
+    featured_users = TrackedUser.objects.filter(is_featured=True)[:6]
+    top_performers = TrackedUser.objects.order_by('-total_solved')[:10]
+    
+    context = {
+        'total_users': total_users,
+        'tracked_users': tracked_users,
+        'featured_users': featured_users,
+        'top_performers': top_performers,
+    }
+    
+    return render(request, 'tracker/home.html', context)
+
 
 def profile(request, username):
-    """Profile page view"""
+    """Profile page view - Shows detailed user statistics"""
+    tracked_user, created = TrackedUser.objects.get_or_create(
+        username=username,
+        defaults={'display_name': username}
+    )
+    
+    tracked_user.increment_views()
+    
     return render(request, 'tracker/profile.html', {'username': username})
+
 
 async def get_user_data(username: str):
     """Async helper to fetch user data"""
     data = await LeetCodeAPI.fetch_user_data(username)
-    return parse_user_stats(data)
+    stats = parse_user_stats(data)
+    
+    # Update tracked user in database
+    if not stats.get('error'):
+        try:
+            tracked_user, created = await TrackedUser.objects.aget_or_create(
+                username=username
+            )
+            
+            await asyncio.to_thread(tracked_user.update_stats, stats)
+        except Exception as e:
+            print(f"Error updating tracked user: {e}")
+    
+    return stats
+
 
 def api_user_data(request, username):
     """API endpoint to fetch user data"""
@@ -560,10 +339,102 @@ def api_user_data(request, username):
         asyncio.set_event_loop(loop)
         user_stats = loop.run_until_complete(get_user_data(username))
         loop.close()
-        
+
         return JsonResponse(user_stats)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+def api_users_list(request):
+    """API endpoint to get list of all tracked users"""
+    try:
+        sort_by = request.GET.get('sort', 'views')
+        limit = int(request.GET.get('limit', 20))
+        search = request.GET.get('search', '').strip()
+        
+        users = TrackedUser.objects.all()
+        
+        if search:
+            users = users.filter(
+                Q(username__icontains=search) | 
+                Q(display_name__icontains=search)
+            )
+        
+        if sort_by == 'solved':
+            users = users.order_by('-total_solved')
+        elif sort_by == 'rating':
+            users = users.order_by('-contest_rating')
+        else:
+            users = users.order_by('-view_count')
+        
+        users = users[:limit]
+        
+        users_data = []
+        for user in users:
+            users_data.append({
+                'username': user.username,
+                'display_name': user.display_name or user.username,
+                'total_solved': user.total_solved,
+                'easy': user.easy_solved,
+                'medium': user.medium_solved,
+                'hard': user.hard_solved,
+                'ranking': user.ranking,
+                'contest_rating': user.contest_rating,
+                'view_count': user.view_count,
+                'is_featured': user.is_featured,
+                'last_updated': user.last_updated.isoformat(),
+            })
+        
+        return JsonResponse({
+            'total': TrackedUser.objects.count(),
+            'count': len(users_data),
+            'users': users_data
+        })
+    
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+def api_leaderboard(request):
+    """API endpoint for leaderboard data"""
+    try:
+        category = request.GET.get('category', 'total')
+        limit = int(request.GET.get('limit', 10))
+        
+        if category == 'easy':
+            users = TrackedUser.objects.order_by('-easy_solved')[:limit]
+            key = 'easy_solved'
+        elif category == 'medium':
+            users = TrackedUser.objects.order_by('-medium_solved')[:limit]
+            key = 'medium_solved'
+        elif category == 'hard':
+            users = TrackedUser.objects.order_by('-hard_solved')[:limit]
+            key = 'hard_solved'
+        elif category == 'contest':
+            users = TrackedUser.objects.filter(contest_rating__isnull=False).order_by('-contest_rating')[:limit]
+            key = 'contest_rating'
+        else:
+            users = TrackedUser.objects.order_by('-total_solved')[:limit]
+            key = 'total_solved'
+        
+        leaderboard = []
+        for rank, user in enumerate(users, 1):
+            leaderboard.append({
+                'rank': rank,
+                'username': user.username,
+                'display_name': user.display_name or user.username,
+                'value': getattr(user, key),
+                'total_solved': user.total_solved,
+            })
+        
+        return JsonResponse({
+            'category': category,
+            'leaderboard': leaderboard
+        })
+    
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 def api_debug_raw(request, username):
     """Debug endpoint to see raw API response"""
@@ -572,7 +443,7 @@ def api_debug_raw(request, username):
         asyncio.set_event_loop(loop)
         raw_data = loop.run_until_complete(LeetCodeAPI.fetch_user_data(username))
         loop.close()
-        
+
         return JsonResponse(raw_data, json_dumps_params={'indent': 2})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)

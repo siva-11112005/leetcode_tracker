@@ -1,3 +1,53 @@
 from django.db import models
+from django.utils import timezone
 
-# Create your models here.
+class TrackedUser(models.Model):
+    """
+    Store information about tracked LeetCode users
+    """
+    username = models.CharField(max_length=100, unique=True, db_index=True)
+    display_name = models.CharField(max_length=200, blank=True)
+    
+    # Statistics (cached for performance)
+    total_solved = models.IntegerField(default=0)
+    easy_solved = models.IntegerField(default=0)
+    medium_solved = models.IntegerField(default=0)
+    hard_solved = models.IntegerField(default=0)
+    ranking = models.IntegerField(null=True, blank=True)
+    contest_rating = models.FloatField(null=True, blank=True)
+    
+    # Metadata
+    first_tracked = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
+    view_count = models.IntegerField(default=0)
+    is_featured = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-view_count', '-total_solved']
+        indexes = [
+            models.Index(fields=['-view_count']),
+            models.Index(fields=['-total_solved']),
+        ]
+    
+    def __str__(self):
+        return f"{self.display_name or self.username} ({self.total_solved} solved)"
+    
+    def increment_views(self):
+        """Increment view count when profile is visited"""
+        self.view_count += 1
+        self.save(update_fields=['view_count'])
+    
+    def update_stats(self, stats_data):
+        """Update cached statistics from API response"""
+        self.display_name = stats_data.get('display_name', self.username)
+        self.total_solved = stats_data.get('total_solved', 0)
+        self.easy_solved = stats_data.get('easy', 0)
+        self.medium_solved = stats_data.get('medium', 0)
+        self.hard_solved = stats_data.get('hard', 0)
+        self.ranking = stats_data.get('ranking') if stats_data.get('ranking') != 'N/A' else None
+        
+        contest_rating = stats_data.get('contest_rating')
+        if contest_rating != 'N/A':
+            self.contest_rating = contest_rating
+        
+        self.save()

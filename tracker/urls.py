@@ -6,6 +6,10 @@ app_name = 'tracker'
 urlpatterns = [
     path('', views.home, name='home'),
     path('profile/<str:username>/', views.profile, name='profile'),
+    
+    # API endpoints
     path('api/user/<str:username>/', views.api_user_data, name='api_user_data'),
+    path('api/users/', views.api_users_list, name='api_users_list'),
+    path('api/leaderboard/', views.api_leaderboard, name='api_leaderboard'),
     path('api/debug/<str:username>/', views.api_debug_raw, name='api_debug_raw'),
 ]
