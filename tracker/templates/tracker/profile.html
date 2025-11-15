@@ -406,19 +406,35 @@
             const content = document.getElementById('content');
             const initial = data.display_name.charAt(0).toUpperCase();
             
+            // Helper to get relative time
+            function getRelativeTime(timestamp) {
+                if (!timestamp) return 'Unknown time';
+                const now = new Date();
+                const then = new Date(timestamp * 1000);
+                const diff = Math.floor((now - then) / 1000);
+                if (diff < 60) return 'Just now';
+                if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+                if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+                if (diff < 172800) return 'Yesterday';
+                if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+                if (diff < 2592000) return `${Math.floor(diff / 604800)} weeks ago`;
+                return `${Math.floor(diff / 2592000)} months ago`;
+            }
+            
             let submissionsHTML = '';
             if (data.recent_submissions && data.recent_submissions.length > 0) {
                 submissionsHTML = data.recent_submissions.map(sub => {
-                    const statusClass = sub.status.toLowerCase().includes('accepted') ? 'accepted' : 'wrong';
+                    const statusLower = (sub.status || '').toLowerCase();
+                    const statusClass = statusLower.includes('accepted') ? 'accepted' : 'wrong';
                     const statusIcon = statusClass === 'accepted' ? '✓' : '✗';
-                    const timestamp = sub.timestamp ? new Date(parseInt(sub.timestamp) * 1000).toLocaleString() : 'Unknown time';
+                    const timeAgo = getRelativeTime(sub.timestamp);
                     return `
                         <div class="submission-item">
                             <div class="submission-info">
-                                <div class="submission-title">${sub.title}</div>
-                                <div class="submission-meta">${sub.lang} • ${timestamp}</div>
+                                <div class="submission-title">${sub.title || 'Unknown'}</div>
+                                <div class="submission-meta">${sub.lang || 'N/A'} • ${timeAgo}</div>
                             </div>
-                            <div class="submission-status ${statusClass}">${statusIcon} ${sub.status}</div>
+                            <div class="submission-status ${statusClass}">${statusIcon} ${sub.status || 'Unknown'}</div>
                         </div>
                     `;
                 }).join('');
@@ -450,8 +466,13 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">🔥</div>
+                        <div class="stat-label">Current Streak</div>
+                        <div class="stat-value">${data.current_streak || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
                         <div class="stat-label">Max Streak</div>
-                        <div class="stat-value">${data.max_streak}</div>
+                        <div class="stat-value">${data.max_streak || 0}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">🎯</div>
