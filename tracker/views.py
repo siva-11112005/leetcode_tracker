@@ -1,6 +1,8 @@
 import asyncio
 import aiohttp
 import json
+import re
+from urllib.parse import quote
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.db.models import Q
@@ -23,10 +25,13 @@ class LeetCodeAPI:
         
         async with aiohttp.ClientSession(timeout=timeout) as session:
             # ===== FETCH PROFILE DATA =====
+            # URL-encode username for inclusion in REST endpoints (prevents spaces/special-char issues)
+            safe_username = quote(username, safe='')
+
             profile_endpoints = [
-                f"https://leetcode-stats-api.herokuapp.com/{username}",
-                f"https://alfa-leetcode-api.onrender.com/userProfile/{username}",
-                f"https://alfa-leetcode-api.onrender.com/{username}",
+                f"https://leetcode-stats-api.herokuapp.com/{safe_username}",
+                f"https://alfa-leetcode-api.onrender.com/userProfile/{safe_username}",
+                f"https://alfa-leetcode-api.onrender.com/{safe_username}",
             ]
             
             for endpoint in profile_endpoints:
@@ -44,8 +49,8 @@ class LeetCodeAPI:
             
             # ===== FETCH RECENT SUBMISSIONS =====
             submission_endpoints = [
-                f"https://alfa-leetcode-api.onrender.com/{username}/submission",
-                f"https://alfa-leetcode-api.onrender.com/{username}/acSubmission",
+                f"https://alfa-leetcode-api.onrender.com/{safe_username}/submission",
+                f"https://alfa-leetcode-api.onrender.com/{safe_username}/acSubmission",
             ]
             
             for sub_endpoint in submission_endpoints:
@@ -102,8 +107,8 @@ class LeetCodeAPI:
             
             # ===== FETCH CONTEST DATA =====
             contest_endpoints = [
-                f"https://alfa-leetcode-api.onrender.com/userContestRankingInfo/{username}",
-                f"https://alfa-leetcode-api.onrender.com/{username}/contest",
+                f"https://alfa-leetcode-api.onrender.com/userContestRankingInfo/{safe_username}",
+                f"https://alfa-leetcode-api.onrender.com/{safe_username}/contest",
             ]
             
             for contest_endpoint in contest_endpoints:
@@ -407,7 +412,8 @@ def profiles(request):
             'top_performers': [],
         })
 
-    usernames = [u.strip() for u in q.split(',') if u.strip()]
+    # Accept comma-separated or whitespace-separated lists, normalize them
+    usernames = [u.strip() for u in re.split(r'[\s,]+', q) if u.strip()]
     # Limit to reasonable number
     usernames = usernames[:50]
 
@@ -552,8 +558,8 @@ def api_user_data_multi(request):
         else:
             q = request.GET.get('usernames', '').strip()
             if q:
-                # comma-separated list
-                usernames = [u.strip() for u in q.split(',') if u.strip()]
+                # Accept comma-separated or whitespace-separated lists
+                usernames = [u.strip() for u in re.split(r'[\s,]+', q) if u.strip()]
 
         if not usernames:
             return JsonResponse({'error': 'No usernames provided. Use ?usernames=a,b or POST {"usernames": [...]}'}, status=400)
