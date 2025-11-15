@@ -151,7 +151,14 @@ def calculate_streak_from_calendar(submission_calendar):
     dates = []
     for timestamp_str in submission_calendar.keys():
         try:
+            # timestamps in some APIs may be seconds or milliseconds (or strings)
             timestamp = int(timestamp_str)
+            # If timestamp appears to be milliseconds, convert to seconds
+            if timestamp > 10**12:
+                timestamp = timestamp // 1000
+            elif timestamp > 10**11:
+                # borderline case, treat as ms
+                timestamp = timestamp // 1000
             date = datetime.fromtimestamp(timestamp).date()
             dates.append(date)
         except:
@@ -243,25 +250,46 @@ def parse_user_stats(user_data: dict) -> dict:
     # ===== RECENT SUBMISSIONS EXTRACTION =====
     recent_submissions = []
 
+    def normalize_timestamp(ts):
+        if ts is None or ts == "":
+            return None
+        try:
+            # Direct numeric
+            t = int(float(ts))
+            if t > 10**12:
+                t = t // 1000
+            elif t > 10**11:
+                t = t // 1000
+            return t
+        except Exception:
+            # Try ISO parsing
+            try:
+                dt = datetime.fromisoformat(str(ts))
+                return int(dt.timestamp())
+            except Exception:
+                return None
+
     # Method 1: submissions dict with 'submission' key
     if isinstance(submissions, dict) and 'submission' in submissions:
         sub_list = submissions['submission']
         if isinstance(sub_list, list):
             for sub in sub_list[:20]:
+                ts = normalize_timestamp(sub.get('timestamp'))
                 recent_submissions.append({
                     "title": sub.get("title", sub.get("titleSlug", "Unknown")),
                     "status": sub.get("statusDisplay", sub.get("status", "Unknown")),
-                    "timestamp": sub.get("timestamp", ""),
+                    "timestamp": ts,
                     "lang": sub.get("lang", "N/A")
                 })
 
     # Method 2: submissions is directly a list
     elif isinstance(submissions, list):
         for sub in submissions[:20]:
+            ts = normalize_timestamp(sub.get('timestamp'))
             recent_submissions.append({
                 "title": sub.get("title", sub.get("titleSlug", "Unknown")),
                 "status": sub.get("statusDisplay", sub.get("status", "Unknown")),
-                "timestamp": sub.get("timestamp", ""),
+                "timestamp": ts,
                 "lang": sub.get("lang", "N/A")
             })
 
@@ -270,10 +298,11 @@ def parse_user_stats(user_data: dict) -> dict:
         submissions_from_profile = profile["recentSubmissions"]
         if isinstance(submissions_from_profile, list):
             for sub in submissions_from_profile[:20]:
+                ts = normalize_timestamp(sub.get('timestamp'))
                 recent_submissions.append({
                     "title": sub.get("title", sub.get("titleSlug", "Unknown")),
                     "status": sub.get("statusDisplay", sub.get("status", "Unknown")),
-                    "timestamp": sub.get("timestamp", ""),
+                    "timestamp": ts,
                     "lang": sub.get("lang", "N/A")
                 })
 
@@ -282,10 +311,11 @@ def parse_user_stats(user_data: dict) -> dict:
         ac_submissions = profile["recentAcSubmissionList"]
         if isinstance(ac_submissions, list):
             for sub in ac_submissions[:20]:
+                ts = normalize_timestamp(sub.get('timestamp'))
                 recent_submissions.append({
                     "title": sub.get("title", sub.get("titleSlug", "Unknown")),
                     "status": "Accepted",
-                    "timestamp": sub.get("timestamp", ""),
+                    "timestamp": ts,
                     "lang": sub.get("lang", "N/A")
                 })
 
@@ -440,36 +470,73 @@ def profiles(request):
 
     # Normalize results: ensure list of dicts and map keys to match template expectations
     users = []
-    for r in results:
-        if isinstance(r, Exception):
-            users.append({
-                'username': 'unknown',
-                'display_name': 'Unknown',
-                'total_solved': 0,
-                'easy_solved': 0,
-                'medium_solved': 0,
-                'hard_solved': 0,
-                'easy': 0,
-                'medium': 0,
-                'hard': 0,
-                'ranking': None,
-                'contest_rating': None,
-                'view_count': 0,
-                'is_featured': False,
-                'recent_submissions': [],
-                'invalid': True,
-                'fetch_error': str(r),
-                'error': str(r),
-                'current_streak': 0,
-                'max_streak': 0,
-            })
+    for idx, r in enumerate(results):
+        input_username = usernames[idx] if idx < len(usernames) else None
+
+        # If the async task raised an exception or the API returned an error,
+        # try to fall back to the DB cached TrackedUser to avoid showing
+        # "User not found" for previously added users.
+        if isinstance(r, Exception) or (isinstance(r, dict) and r.get('error')):
+            # Attempt DB fallback
+            fallback_user = None
+            try:
+                if input_username:
+                    fallback_user = TrackedUser.objects.filter(username__iexact=input_username).first()
+            except Exception:
+                fallback_user = None
+
+            if fallback_user:
+                users.append({
+                    'username': fallback_user.username,
+                    'display_name': fallback_user.display_name or fallback_user.username,
+                    'total_solved': fallback_user.total_solved,
+                    'easy_solved': fallback_user.easy_solved,
+                    'medium_solved': fallback_user.medium_solved,
+                    'hard_solved': fallback_user.hard_solved,
+                    'easy': fallback_user.easy_solved,
+                    'medium': fallback_user.medium_solved,
+                    'hard': fallback_user.hard_solved,
+                    'ranking': fallback_user.ranking,
+                    'contest_rating': fallback_user.contest_rating,
+                    'view_count': fallback_user.view_count,
+                    'is_featured': fallback_user.is_featured,
+                    'recent_submissions': [],
+                    'invalid': False,
+                    'error': None,
+                    'fetch_error': str(r) if isinstance(r, Exception) else r.get('error'),
+                    'correct_username': None,
+                    'current_streak': getattr(fallback_user, 'current_streak', 0) or 0,
+                    'max_streak': getattr(fallback_user, 'max_streak', 0) or 0,
+                })
+            else:
+                # No DB fallback available — mark invalid
+                users.append({
+                    'username': input_username or 'unknown',
+                    'display_name': input_username or 'Unknown',
+                    'total_solved': 0,
+                    'easy_solved': 0,
+                    'medium_solved': 0,
+                    'hard_solved': 0,
+                    'easy': 0,
+                    'medium': 0,
+                    'hard': 0,
+                    'ranking': None,
+                    'contest_rating': None,
+                    'view_count': 0,
+                    'is_featured': False,
+                    'recent_submissions': [],
+                    'invalid': True,
+                    'fetch_error': str(r) if isinstance(r, Exception) else r.get('error'),
+                    'error': r.get('error') if isinstance(r, dict) else str(r),
+                    'current_streak': 0,
+                    'max_streak': 0,
+                })
         else:
             # r is stats dict from parse_user_stats
-            # If parse_user_stats marked an error, propagate it; otherwise include None
             is_invalid = bool(r.get('error'))
             users.append({
-                'username': r.get('username') or r.get('display_name') or 'unknown',
-                'display_name': r.get('display_name', r.get('username')),
+                'username': r.get('username') or r.get('display_name') or (input_username or 'unknown'),
+                'display_name': r.get('display_name', r.get('username') or input_username),
                 'total_solved': r.get('total_solved', 0),
                 'easy_solved': r.get('easy', r.get('easy_solved', 0)),
                 'medium_solved': r.get('medium', r.get('medium_solved', 0)),
@@ -541,6 +608,31 @@ def api_user_data(request, username):
         user_stats = loop.run_until_complete(get_user_data(username))
         loop.close()
 
+        # If the fetch failed, attempt to return cached DB data instead of an error
+        if isinstance(user_stats, dict) and user_stats.get('error'):
+            try:
+                db_user = TrackedUser.objects.filter(username__iexact=username).first()
+            except Exception:
+                db_user = None
+
+            if db_user:
+                cached = {
+                    'username': db_user.username,
+                    'display_name': db_user.display_name or db_user.username,
+                    'total_solved': db_user.total_solved,
+                    'easy': db_user.easy_solved,
+                    'medium': db_user.medium_solved,
+                    'hard': db_user.hard_solved,
+                    'ranking': db_user.ranking or 'N/A',
+                    'contest_rating': db_user.contest_rating or 'N/A',
+                    'current_streak': getattr(db_user, 'current_streak', 0) or 0,
+                    'max_streak': getattr(db_user, 'max_streak', 0) or 0,
+                    'recent_submissions': getattr(db_user, 'recent_submissions', []) or [],
+                    'error': None,
+                    'fetch_error': user_stats.get('error')
+                }
+                return JsonResponse(cached)
+
         return JsonResponse(user_stats)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -595,8 +687,31 @@ def api_user_data_multi(request):
         # Normalize exceptions
         out = []
         for u, r in zip(usernames, results):
-            if isinstance(r, Exception):
-                out.append({'username': u, 'error': str(r)})
+            # If exception or API-level error, attempt DB fallback per-user
+            if isinstance(r, Exception) or (isinstance(r, dict) and r.get('error')):
+                try:
+                    db_user = TrackedUser.objects.filter(username__iexact=u).first()
+                except Exception:
+                    db_user = None
+
+                if db_user:
+                    out.append({
+                        'username': db_user.username,
+                        'display_name': db_user.display_name or db_user.username,
+                        'total_solved': db_user.total_solved,
+                        'easy': db_user.easy_solved,
+                        'medium': db_user.medium_solved,
+                        'hard': db_user.hard_solved,
+                        'ranking': db_user.ranking or 'N/A',
+                        'contest_rating': db_user.contest_rating or 'N/A',
+                        'current_streak': getattr(db_user, 'current_streak', 0) or 0,
+                        'max_streak': getattr(db_user, 'max_streak', 0) or 0,
+                        'recent_submissions': [],
+                        'error': None,
+                        'fetch_error': str(r) if isinstance(r, Exception) else r.get('error')
+                    })
+                else:
+                    out.append({'username': u, 'error': str(r) if isinstance(r, Exception) else r.get('error')})
             else:
                 out.append(r)
 

@@ -735,10 +735,14 @@
                         </div>
 
                         <!-- Last Activity - Shows only ONE submission -->
-                        <div class="last-activity" data-username="{{ user.username }}">
+                        <div class="last-activity" data-username="{{ user.username }}" {% if user.recent_submissions and user.recent_submissions.0.timestamp %}data-server-timestamp="{{ user.recent_submissions.0.timestamp }}"{% endif %}>
                             <div class="activity-header">
                                 <span class="activity-label">📝 Last Submission</span>
-                                <span class="activity-time">{% if user.recent_submissions and user.recent_submissions.0.timestamp %}{{ user.recent_submissions.0.timestamp }}{% else %}Loading...{% endif %}</span>
+                                {% if user.recent_submissions and user.recent_submissions.0.timestamp %}
+                                    <span class="activity-time" data-server-timestamp="{{ user.recent_submissions.0.timestamp }}">Loading...</span>
+                                {% else %}
+                                    <span class="activity-time">Loading...</span>
+                                {% endif %}
                             </div>
                             <div class="activity-content">
                                 {% if user.recent_submissions and user.recent_submissions.0.title %}
@@ -1077,8 +1081,21 @@
         }
 
         // Initialize - Load submissions on page load
+        function processServerRecentSubmissions() {
+            document.querySelectorAll('.last-activity[data-server-timestamp]').forEach(card => {
+                const ts = parseInt(card.getAttribute('data-server-timestamp'));
+                const timeEl = card.querySelector('.activity-time');
+                if (ts && timeEl) {
+                    timeEl.textContent = getRelativeTime(new Date(ts * 1000));
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             calculateDifficultyWidths();
+            // First show any server-provided recent submissions (cached)
+            processServerRecentSubmissions();
+            // Then fetch fresh submissions via API
             loadLastSubmissions();
             setInterval(loadLastSubmissions, 300000); // Refresh every 5 minutes
         });

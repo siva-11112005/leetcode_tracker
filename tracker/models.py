@@ -18,6 +18,8 @@ class TrackedUser(models.Model):
     # Streaks
     current_streak = models.IntegerField(default=0)
     max_streak = models.IntegerField(default=0)
+    # Store recent submissions (cached) as JSON
+    recent_submissions = models.JSONField(default=list, blank=True)
     
     # Metadata
     first_tracked = models.DateTimeField(auto_now_add=True)
@@ -81,5 +83,13 @@ class TrackedUser(models.Model):
             self.max_streak = int(stats_data.get('max_streak', 0) or 0)
         except Exception:
             self.max_streak = 0
+        # Persist recent_submissions if present
+        try:
+            recs = stats_data.get('recent_submissions')
+            if isinstance(recs, list):
+                # Keep only a modest number
+                self.recent_submissions = recs[:50]
+        except Exception:
+            pass
 
         self.save()
