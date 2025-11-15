@@ -367,7 +367,7 @@
     </div>
 
     <script>
-        const username = '{{ username }}';
+        const username = "{{ username|escapejs }}";
 
         async function loadProfile() {
             try {
@@ -405,15 +405,25 @@
 
         function renderProfile(data) {
             const content = document.getElementById('content');
-            const initial = data.display_name.charAt(0).toUpperCase();
+            const initial = (data.display_name || data.username || '').charAt(0).toUpperCase();
             console.log('Rendering profile for:', data.username);
             console.log('Display name:', data.display_name);
+            // Prepare safe displays to avoid runtime errors in template literal
+            const rankingDisplay = (typeof data.ranking === 'number' && !isNaN(data.ranking))
+                ? '#' + data.ranking.toLocaleString()
+                : (data.ranking && data.ranking !== 'N/A' ? '#' + String(data.ranking) : 'N/A');
+            const contestRatingDisplay = (data.contest_rating !== null && data.contest_rating !== undefined && data.contest_rating !== 'N/A')
+                ? data.contest_rating
+                : 'N/A';
+
             console.log('Stats:', {
                 ranking: data.ranking,
+                rankingDisplay: rankingDisplay,
                 total_solved: data.total_solved,
                 current_streak: data.current_streak,
                 max_streak: data.max_streak,
                 contest_rating: data.contest_rating,
+                contestRatingDisplay: contestRatingDisplay,
                 easy: data.easy,
                 medium: data.medium,
                 hard: data.hard
@@ -471,7 +481,7 @@
                     <div class="stat-card">
                         <div class="stat-icon">🏆</div>
                         <div class="stat-label">Global Ranking</div>
-                        <div class="stat-value">${data.ranking !== 'N/A' ? '#' + data.ranking.toLocaleString() : 'N/A'}</div>
+                        <div class="stat-value">${rankingDisplay}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">✅</div>
@@ -491,7 +501,7 @@
                     <div class="stat-card">
                         <div class="stat-icon">🎯</div>
                         <div class="stat-label">Contest Rating</div>
-                        <div class="stat-value">${data.contest_rating !== 'N/A' ? data.contest_rating : 'N/A'}</div>
+                        <div class="stat-value">${contestRatingDisplay}</div>
                     </div>
                 </div>
 
@@ -499,15 +509,15 @@
                 <div class="problems-grid">
                     <div class="problem-card easy">
                         <div class="problem-label">Easy Problems</div>
-                        <div class="problem-count">${data.easy}</div>
+                        <div class="problem-count">${data.easy || 0}</div>
                     </div>
                     <div class="problem-card medium">
                         <div class="problem-label">Medium Problems</div>
-                        <div class="problem-count">${data.medium}</div>
+                        <div class="problem-count">${data.medium || 0}</div>
                     </div>
                     <div class="problem-card hard">
                         <div class="problem-label">Hard Problems</div>
-                        <div class="problem-count">${data.hard}</div>
+                        <div class="problem-count">${data.hard || 0}</div>
                     </div>
                 </div>
 
