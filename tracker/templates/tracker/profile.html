@@ -373,6 +373,7 @@
             try {
                 const response = await fetch(`/api/user/${username}/`);
                 const data = await response.json();
+                console.log('API Response:', data);
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
@@ -405,6 +406,19 @@
         function renderProfile(data) {
             const content = document.getElementById('content');
             const initial = data.display_name.charAt(0).toUpperCase();
+            console.log('Rendering profile for:', data.username);
+            console.log('Display name:', data.display_name);
+            console.log('Stats:', {
+                ranking: data.ranking,
+                total_solved: data.total_solved,
+                current_streak: data.current_streak,
+                max_streak: data.max_streak,
+                contest_rating: data.contest_rating,
+                easy: data.easy,
+                medium: data.medium,
+                hard: data.hard
+            });
+            console.log('Recent submissions:', data.recent_submissions);
             
             // Helper to get relative time
             function getRelativeTime(timestamp) {
