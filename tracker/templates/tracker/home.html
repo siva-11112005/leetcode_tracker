@@ -647,7 +647,28 @@
             <div id="usersGrid" class="user-grid">
                 {% if tracked_users %}
                     {% for user in tracked_users %}
-                    <a href="/profile/{{ user.username }}/" class="user-card">
+                        {% if user.error %}
+                            <div class="user-card">
+                                <div class="user-card-header">
+                                    <div class="user-avatar">{{ user.display_name.0|upper|default:user.username.0|upper }}</div>
+                                    <div class="user-info">
+                                        <div class="user-name">{{ user.display_name|default:user.username }}</div>
+                                        <div class="username">@{{ user.username }}</div>
+                                    </div>
+                                    <div class="user-rank">
+                                        <div class="rank-label">Error</div>
+                                        <div class="rank-value">Invalid</div>
+                                    </div>
+                                </div>
+                                <div style="padding: 12px; color: #b91c1c;">{{ user.error }}</div>
+                                {% if user.correct_username %}
+                                    <div style="padding: 0 12px 12px;">
+                                        Did you mean: <a href="/profile/{{ user.correct_username }}/">@{{ user.correct_username }}</a> ?
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <a href="/profile/{{ user.username }}/" class="user-card">
                         <!-- Card Header -->
                         <div class="user-card-header">
                             <div class="user-avatar">{{ user.display_name.0|upper|default:user.username.0|upper }}</div>
@@ -688,21 +709,21 @@
                             <div class="difficulty-item">
                                 <span class="difficulty-label easy">Easy</span>
                                 <div class="difficulty-bar">
-                                    <div class="difficulty-fill easy" style="width: {% widthratio user.easy_solved user.total_solved 100 %}%"></div>
+                                    <div class="difficulty-fill easy" data-solved="{{ user.easy_solved }}" data-total="{{ user.total_solved }}"></div>
                                 </div>
                                 <span class="difficulty-count">{{ user.easy_solved }}</span>
                             </div>
                             <div class="difficulty-item">
                                 <span class="difficulty-label medium">Medium</span>
                                 <div class="difficulty-bar">
-                                    <div class="difficulty-fill medium" style="width: {% widthratio user.medium_solved user.total_solved 100 %}%"></div>
+                                    <div class="difficulty-fill medium" data-solved="{{ user.medium_solved }}" data-total="{{ user.total_solved }}"></div>
                                 </div>
                                 <span class="difficulty-count">{{ user.medium_solved }}</span>
                             </div>
                             <div class="difficulty-item">
                                 <span class="difficulty-label hard">Hard</span>
                                 <div class="difficulty-bar">
-                                    <div class="difficulty-fill hard" style="width: {% widthratio user.hard_solved user.total_solved 100 %}%"></div>
+                                    <div class="difficulty-fill hard" data-solved="{{ user.hard_solved }}" data-total="{{ user.total_solved }}"></div>
                                 </div>
                                 <span class="difficulty-count">{{ user.hard_solved }}</span>
                             </div>
@@ -712,24 +733,49 @@
                         <div class="last-activity" data-username="{{ user.username }}">
                             <div class="activity-header">
                                 <span class="activity-label">📝 Last Submission</span>
-                                <span class="activity-time">Loading...</span>
+                                <span class="activity-time">{% if user.recent_submissions and user.recent_submissions.0.timestamp %}{{ user.recent_submissions.0.timestamp }}{% else %}Loading...{% endif %}</span>
                             </div>
                             <div class="activity-content">
-                                <div class="no-activity">No recent activity</div>
+                                {% if user.recent_submissions and user.recent_submissions.0.title %}
+                                    <div class="activity-problem">{{ user.recent_submissions.0.title }}</div>
+                                    <div class="activity-meta">
+                                        {% with status=user.recent_submissions.0.status|default:"Unknown" %}
+                                            {% with status_lower=status|lower %}
+                                                {% if "accept" in status_lower %}
+                                                    <span class="activity-status">✓ {{ status }}</span>
+                                                {% elif "wrong" in status_lower %}
+                                                    <span class="activity-status wrong">✗ {{ status }}</span>
+                                                {% else %}
+                                                    <span class="activity-status pending">⏳ {{ status }}</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% endwith %}
+                                        <span style="margin-left: 8px; color: #94a3b8;">• {{ user.recent_submissions.0.lang }}</span>
+                                    </div>
+                                {% else %}
+                                    <div class="no-activity">No recent submissions</div>
+                                {% endif %}
                             </div>
                         </div>
 
                         <!-- Badges -->
                         <div class="badges">
+                            {% if user.correct_username and user.correct_username != user.username %}
+                                <span class="badge" title="Canonical username">🔁 @{{ user.correct_username }}</span>
+                            {% endif %}
                             {% if user.is_featured %}
                             <span class="badge featured">⭐ Featured</span>
                             {% endif %}
-                            <span class="badge views">👁️ {{ user.view_count }} views</span>
+                            {% if user.invalid %}
+                                <span class="badge" style="background:#fee2e2;color:#b91c1c;">⚠️ Invalid username</span>
+                            {% endif %}
+                            <span class="badge views">👁️ {{ user.view_count }}</span>
                             {% if user.contest_rating %}
                             <span class="badge">🏆 {{ user.contest_rating|floatformat:0 }}</span>
                             {% endif %}
                         </div>
-                    </a>
+                            </a>
+                        {% endif %}
                     {% endfor %}
                 {% else %}
                     <div class="empty-state">
@@ -792,6 +838,16 @@
     </div>
 
     <script>
+        // Calculate difficulty bar widths from data attributes
+        function calculateDifficultyWidths() {
+            document.querySelectorAll('.difficulty-fill').forEach(fill => {
+                const solved = parseInt(fill.getAttribute('data-solved')) || 0;
+                const total = parseInt(fill.getAttribute('data-total')) || 1;
+                const percentage = total > 0 ? (solved / total) * 100 : 0;
+                fill.style.width = percentage + '%';
+            });
+        }
+
         // Tab Switching
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => {
@@ -810,7 +866,13 @@
             event.preventDefault();
             const username = document.getElementById('username').value.trim();
             if (username) {
-                window.location.href = `/profile/${username}/`;
+                // If comma-separated list provided, open multi-profile view
+                if (username.includes(',')) {
+                    const encoded = encodeURIComponent(username);
+                    window.location.href = `/profiles/?usernames=${encoded}`;
+                } else {
+                    window.location.href = `/profile/${username}/`;
+                }
             }
         }
 
@@ -890,6 +952,7 @@
 
                 if (data.users && data.users.length > 0) {
                     await renderUsers(data.users);
+                    calculateDifficultyWidths();
                     updateStats(data);
                 }
             } catch (error) {
@@ -987,6 +1050,7 @@
             grid.innerHTML = userCardsHTML;
             
             // Load submissions AFTER rendering cards
+            calculateDifficultyWidths();
             await loadLastSubmissions();
         }
 
@@ -999,6 +1063,7 @@
 
         // Initialize - Load submissions on page load
         document.addEventListener('DOMContentLoaded', () => {
+            calculateDifficultyWidths();
             loadLastSubmissions();
             setInterval(loadLastSubmissions, 300000); // Refresh every 5 minutes
         });

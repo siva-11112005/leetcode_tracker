@@ -36,7 +36,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -44,6 +43,19 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Optionally enable WhiteNoise middleware and storage if installed
+_WHITENOISE_AVAILABLE = False
+try:
+    import importlib
+    if importlib.util.find_spec('whitenoise'):
+        _WHITENOISE_AVAILABLE = True
+except Exception:
+    _WHITENOISE_AVAILABLE = False
+
+if _WHITENOISE_AVAILABLE:
+    # Insert WhiteNoise right after SecurityMiddleware (index 1)
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'leetcode_tracker.urls'
 
@@ -102,8 +114,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# WhiteNoise Configuration
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# WhiteNoise Configuration (only when whitenoise is installed)
+if _WHITENOISE_AVAILABLE:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Production Security Settings (only if DEBUG is False)
 if not DEBUG:

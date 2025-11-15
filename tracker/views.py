@@ -1,5 +1,6 @@
 import asyncio
 import aiohttp
+import json
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.db.models import Q
@@ -34,10 +35,8 @@ class LeetCodeAPI:
                         if response.status == 200:
                             profile_data = await response.json()
                             api_used = endpoint
-                            print(f"✅ Profile fetched from: {endpoint}")
                             break
-                except Exception as e:
-                    print(f"❌ Failed to fetch profile from {endpoint}: {e}")
+                except Exception:
                     continue
             
             if not profile_data:
@@ -56,14 +55,11 @@ class LeetCodeAPI:
                             temp_data = await sub_response.json()
                             if temp_data and isinstance(temp_data, dict) and 'submission' in temp_data:
                                 submissions_data = temp_data
-                                print(f"✅ Submissions fetched from: {sub_endpoint}")
                                 break
                             elif temp_data and isinstance(temp_data, list) and len(temp_data) > 0:
                                 submissions_data = {'submission': temp_data}
-                                print(f"✅ Submissions fetched from: {sub_endpoint}")
                                 break
-                except Exception as e:
-                    print(f"❌ Failed to fetch submissions from {sub_endpoint}: {e}")
+                except Exception:
                     continue
             
             # GraphQL fallback for submissions
@@ -101,9 +97,8 @@ class LeetCodeAPI:
                                 submissions_data = {
                                     'submission': graphql_data['data']['recentSubmissionList']
                                 }
-                                print(f"✅ Submissions fetched from GraphQL")
                 except Exception as e:
-                    print(f"❌ GraphQL submission fetch failed: {e}")
+                    pass
             
             # ===== FETCH CONTEST DATA =====
             contest_endpoints = [
@@ -118,17 +113,9 @@ class LeetCodeAPI:
                             temp_contest_data = await contest_response.json()
                             if temp_contest_data and isinstance(temp_contest_data, dict):
                                 # Accept contest data if it has expected keys or is non-empty
-                                if any(key in temp_contest_data for key in ['rating', 'contestRating', 'userContestRanking', 'attendedContestsCount']):
-                                    contest_data = temp_contest_data
-                                    print(f"✅ Contest data fetched from: {contest_endpoint}")
-                                    break
-                                else:
-                                    # Even if structure is different, still try to use it
-                                    contest_data = temp_contest_data
-                                    print(f"⚠️ Contest data fetched but structure different: {contest_endpoint}")
-                                    break
+                                contest_data = temp_contest_data
+                                break
                 except Exception as e:
-                    print(f"❌ Failed to fetch contest from {contest_endpoint}: {e}")
                     continue
             
             return {
@@ -240,9 +227,7 @@ def parse_user_stats(user_data: dict) -> dict:
 
     # ===== RECENT SUBMISSIONS EXTRACTION =====
     recent_submissions = []
-    
-    print(f"\n🔍 Debug Submissions for {user_data.get('username')}:")
-    
+
     # Method 1: submissions dict with 'submission' key
     if isinstance(submissions, dict) and 'submission' in submissions:
         sub_list = submissions['submission']
@@ -254,8 +239,7 @@ def parse_user_stats(user_data: dict) -> dict:
                     "timestamp": sub.get("timestamp", ""),
                     "lang": sub.get("lang", "N/A")
                 })
-            print(f"✅ Method 1: Found {len(recent_submissions)} submissions")
-    
+
     # Method 2: submissions is directly a list
     elif isinstance(submissions, list):
         for sub in submissions[:20]:
@@ -265,8 +249,7 @@ def parse_user_stats(user_data: dict) -> dict:
                 "timestamp": sub.get("timestamp", ""),
                 "lang": sub.get("lang", "N/A")
             })
-        print(f"✅ Method 2: Found {len(recent_submissions)} submissions")
-    
+
     # Method 3: Check recentSubmissions in profile
     if not recent_submissions and "recentSubmissions" in profile:
         submissions_from_profile = profile["recentSubmissions"]
@@ -278,8 +261,7 @@ def parse_user_stats(user_data: dict) -> dict:
                     "timestamp": sub.get("timestamp", ""),
                     "lang": sub.get("lang", "N/A")
                 })
-            print(f"✅ Method 3: Found {len(recent_submissions)} submissions")
-    
+
     # Method 4: Check for recentAcSubmissionList
     if not recent_submissions and "recentAcSubmissionList" in profile:
         ac_submissions = profile["recentAcSubmissionList"]
@@ -291,20 +273,10 @@ def parse_user_stats(user_data: dict) -> dict:
                     "timestamp": sub.get("timestamp", ""),
                     "lang": sub.get("lang", "N/A")
                 })
-            print(f"✅ Method 4: Found {len(recent_submissions)} AC submissions")
-    
-    if not recent_submissions:
-        print(f"❌ No submissions found")
-    else:
-        print(f"✅ Total submissions extracted: {len(recent_submissions)}")
 
     # ===== IMPROVED CONTEST INFO EXTRACTION =====
     contest_rating = "N/A"
     contests_attended = 0
-
-    print(f"\n🏆 Debug Contest Data for {user_data.get('username')}:")
-    print(f"Contest object: {contest}")
-    print(f"Profile object keys: {profile.keys() if profile else 'None'}")
 
     # Helper function to safely convert to float and check if valid
     def safe_float(value):
@@ -362,28 +334,24 @@ def parse_user_stats(user_data: dict) -> dict:
         ),
     ]
 
-    for i, method in enumerate(extraction_methods, 1):
+    for method in extraction_methods:
         try:
             rating, attended = method()
             if rating is not None and rating > 0:
                 contest_rating = round(rating, 2)
                 contests_attended = attended
-                print(f"✅ Method {i} SUCCESS: Rating={contest_rating}, Attended={attended}")
                 break
-            else:
-                print(f"❌ Method {i} returned None or <= 0 (rating={rating}, attended={attended})")
-        except (ValueError, TypeError, KeyError, AttributeError, IndexError) as e:
-            print(f"❌ Method {i} failed with exception: {type(e).__name__}: {e}")
+        except (ValueError, TypeError, KeyError, AttributeError, IndexError):
             continue
-    else:
-        print(f"⚠️  All extraction methods failed. Contest rating remains '{contest_rating}', attended={contests_attended}")
 
-    print(f"Final Contest Rating: {contest_rating}, Attended: {contests_attended}\n")
+    # Try to discover the canonical username returned by the API
+    canonical_username = user_data.get("username") or profile.get("username") or profile.get("user_name") or profile.get("userSlug") or profile.get("user_slug")
 
     return {
-        "username": user_data.get("username", "Unknown"),
+        "username": canonical_username or user_data.get("username", "Unknown"),
         "display_name": display_name,
         "error": None,
+        "correct_username": canonical_username if canonical_username and canonical_username.lower() != user_data.get("username", "").lower() else None,
         "ranking": ranking,
         "total_solved": total_solved,
         "easy": easy_solved,
@@ -428,6 +396,101 @@ def profile(request, username):
     return render(request, 'tracker/profile.html', {'username': username})
 
 
+def profiles(request):
+    """Render a page showing multiple profiles supplied via ?usernames=a,b,c"""
+    q = request.GET.get('usernames', '').strip()
+    if not q:
+        return render(request, 'tracker/home.html', {
+            'total_users': 0,
+            'tracked_users': [],
+            'featured_users': [],
+            'top_performers': [],
+        })
+
+    usernames = [u.strip() for u in q.split(',') if u.strip()]
+    # Limit to reasonable number
+    usernames = usernames[:50]
+
+    # Fetch stats for each username concurrently
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        tasks = [get_user_data(u) for u in usernames]
+        results = loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+        loop.close()
+    except Exception as e:
+        results = [{'username': u, 'error': str(e)} for u in usernames]
+
+    # Normalize results: ensure list of dicts and map keys to match template expectations
+    users = []
+    for r in results:
+        if isinstance(r, Exception):
+            users.append({
+                'username': 'unknown',
+                'display_name': 'Unknown',
+                'total_solved': 0,
+                'easy_solved': 0,
+                'medium_solved': 0,
+                'hard_solved': 0,
+                'easy': 0,
+                'medium': 0,
+                'hard': 0,
+                'ranking': None,
+                'contest_rating': None,
+                'view_count': 0,
+                'is_featured': False,
+                'recent_submissions': [],
+                'invalid': True,
+                'fetch_error': str(r),
+                'error': str(r),
+                'current_streak': 0,
+                'max_streak': 0,
+            })
+        else:
+            # r is stats dict from parse_user_stats
+            # If parse_user_stats marked an error, propagate it; otherwise include None
+            is_invalid = bool(r.get('error'))
+            users.append({
+                'username': r.get('username') or r.get('display_name') or 'unknown',
+                'display_name': r.get('display_name', r.get('username')),
+                'total_solved': r.get('total_solved', 0),
+                'easy_solved': r.get('easy', r.get('easy_solved', 0)),
+                'medium_solved': r.get('medium', r.get('medium_solved', 0)),
+                'hard_solved': r.get('hard', r.get('hard_solved', 0)),
+                'easy': r.get('easy', r.get('easy_solved', 0)),
+                'medium': r.get('medium', r.get('medium_solved', 0)),
+                'hard': r.get('hard', r.get('hard_solved', 0)),
+                'ranking': r.get('ranking'),
+                'contest_rating': r.get('contest_rating'),
+                'view_count': getattr(r, 'view_count', 0) or r.get('view_count', 0),
+                'is_featured': getattr(r, 'is_featured', False) or r.get('is_featured', False),
+                'recent_submissions': r.get('recent_submissions', []),
+                'invalid': is_invalid,
+                'error': r.get('error') if is_invalid else None,
+                'fetch_error': r.get('error') if is_invalid else None,
+                'correct_username': r.get('correct_username'),
+                'current_streak': r.get('current_streak', 0),
+                'max_streak': r.get('max_streak', 0),
+            })
+
+    # Sort users: valid users first (by total_solved desc), then invalid usernames
+    valid_users = [u for u in users if not u.get('invalid')]
+    invalid_users = [u for u in users if u.get('invalid')]
+
+    valid_users.sort(key=lambda x: x.get('total_solved', 0), reverse=True)
+    # keep invalid users in the input order but ensure they are at the end
+    users = valid_users + invalid_users
+
+    context = {
+        'total_users': len(users),
+        'tracked_users': users,
+        'featured_users': [],
+        'top_performers': [],
+    }
+
+    return render(request, 'tracker/home.html', context)
+
+
 async def get_user_data(username: str):
     """Async helper to fetch user data"""
     data = await LeetCodeAPI.fetch_user_data(username)
@@ -436,13 +499,19 @@ async def get_user_data(username: str):
     # Update tracked user in database
     if not stats.get('error'):
         try:
+            # Use the canonical username returned by the API if available
+            db_username = stats.get('username') or username
+
             tracked_user, created = await TrackedUser.objects.aget_or_create(
-                username=username
+                username=db_username,
+                defaults={'display_name': stats.get('display_name', db_username)}
             )
-            
+
+            # Ensure updates happen in a thread to avoid blocking the event loop
             await asyncio.to_thread(tracked_user.update_stats, stats)
-        except Exception as e:
-            print(f"Error updating tracked user: {e}")
+        except Exception:
+            # Fail silently on update errors in async path
+            pass
     
     return stats
 
@@ -456,6 +525,66 @@ def api_user_data(request, username):
         loop.close()
 
         return JsonResponse(user_stats)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+def api_user_data_multi(request):
+    """API endpoint to fetch multiple users' data concurrently.
+
+    Accepts either:
+    - GET ?usernames=alice,bob,charlie
+    - POST JSON { "usernames": ["alice","bob"] }
+
+    Optional query param: limit (max users to process, default 20)
+    """
+    try:
+        # Parse usernames from GET or POST
+        usernames = []
+        if request.method == 'POST':
+            try:
+                body = json.loads(request.body.decode('utf-8') or '{}')
+            except Exception:
+                body = {}
+
+            if isinstance(body, dict) and body.get('usernames'):
+                usernames = list(body.get('usernames'))
+        else:
+            q = request.GET.get('usernames', '').strip()
+            if q:
+                # comma-separated list
+                usernames = [u.strip() for u in q.split(',') if u.strip()]
+
+        if not usernames:
+            return JsonResponse({'error': 'No usernames provided. Use ?usernames=a,b or POST {"usernames": [...]}'}, status=400)
+
+        # Respect a reasonable limit to avoid overloading the server
+        try:
+            limit = int(request.GET.get('limit', 20))
+        except Exception:
+            limit = 20
+        if limit <= 0:
+            limit = 20
+
+        usernames = usernames[:limit]
+
+        # Run concurrent fetches
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        tasks = [get_user_data(u) for u in usernames]
+        results = loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+        loop.close()
+
+        # Normalize exceptions
+        out = []
+        for u, r in zip(usernames, results):
+            if isinstance(r, Exception):
+                out.append({'username': u, 'error': str(r)})
+            else:
+                out.append(r)
+
+        return JsonResponse({'count': len(out), 'results': out}, json_dumps_params={'indent': 2})
+
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
@@ -479,6 +608,9 @@ def api_users_list(request):
             users = users.order_by('-total_solved')
         elif sort_by == 'rating':
             users = users.order_by('-contest_rating')
+        elif sort_by == 'recent':
+            # Order by most recent submission, fall back to last_updated
+            users = users.order_by('-last_submission', '-last_updated')
         else:
             users = users.order_by('-view_count')
         

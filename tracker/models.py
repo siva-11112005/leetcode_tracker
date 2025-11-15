@@ -19,6 +19,8 @@ class TrackedUser(models.Model):
     # Metadata
     first_tracked = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
+    # Timestamp of the user's most recent submission (if available)
+    last_submission = models.DateTimeField(null=True, blank=True)
     view_count = models.IntegerField(default=0)
     is_featured = models.BooleanField(default=False)
     
@@ -55,5 +57,16 @@ class TrackedUser(models.Model):
                 self.contest_rating = None
         else:
             self.contest_rating = None
-        
+
+        # Update last_submission if recent_submissions present
+        recent = stats_data.get('recent_submissions')
+        if recent and isinstance(recent, list) and len(recent) > 0:
+            try:
+                ts = recent[0].get('timestamp')
+                if ts:
+                    # timestamp is unix seconds
+                    self.last_submission = timezone.datetime.fromtimestamp(int(ts), tz=timezone.utc)
+            except Exception:
+                pass
+
         self.save()
