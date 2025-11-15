@@ -864,15 +864,21 @@
         // Search User
         function searchUser(event) {
             event.preventDefault();
-            const username = document.getElementById('username').value.trim();
-            if (username) {
-                // If comma-separated list provided, open multi-profile view
-                if (username.includes(',')) {
-                    const encoded = encodeURIComponent(username);
-                    window.location.href = `/profiles/?usernames=${encoded}`;
-                } else {
-                    window.location.href = `/profile/${username}/`;
-                }
+            const raw = document.getElementById('username').value.trim();
+            if (!raw) return;
+
+            // Accept comma-separated OR whitespace-separated usernames.
+            // Normalize any sequence of commas and/or whitespace into a single comma-separated list.
+            const containsSeparator = /[\s,]+/.test(raw);
+            if (containsSeparator) {
+                const parts = raw.split(/[\s,]+/).map(s => s.trim()).filter(Boolean);
+                const normalized = parts.join(',');
+                const encoded = encodeURIComponent(normalized);
+                window.location.href = `/profiles/?usernames=${encoded}`;
+            } else {
+                // Single username
+                const username = raw;
+                window.location.href = `/profile/${username}/`;
             }
         }
 
