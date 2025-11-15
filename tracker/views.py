@@ -438,8 +438,46 @@ def profile(request, username):
     )
     
     tracked_user.increment_views()
-    
-    return render(request, 'tracker/profile.html', {'username': username})
+    # Attempt to fetch user data server-side so the template can render immediately
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        stats = loop.run_until_complete(get_user_data(username))
+        loop.close()
+    except Exception as e:
+        stats = {"error": str(e), "username": username}
+
+    # If API fetch failed, try DB cached fallback (similar to api_user_data)
+    if isinstance(stats, dict) and stats.get('error'):
+        try:
+            db_user = TrackedUser.objects.filter(username__iexact=username).first()
+        except Exception:
+            db_user = None
+
+        if db_user:
+            stats = {
+                'username': db_user.username,
+                'display_name': db_user.display_name or db_user.username,
+                'total_solved': db_user.total_solved,
+                'easy': db_user.easy_solved,
+                'medium': db_user.medium_solved,
+                'hard': db_user.hard_solved,
+                'ranking': db_user.ranking or 'N/A',
+                'contest_rating': db_user.contest_rating or 'N/A',
+                'current_streak': getattr(db_user, 'current_streak', 0) or 0,
+                'max_streak': getattr(db_user, 'max_streak', 0) or 0,
+                'recent_submissions': getattr(db_user, 'recent_submissions', []) or [],
+                'error': None,
+                'fetch_error': stats.get('error') if isinstance(stats, dict) else None,
+            }
+
+    # Serialize initial data to inject into template safely
+    initial_data_json = json.dumps(stats, default=str)
+
+    return render(request, 'tracker/profile.html', {
+        'username': username,
+        'initial_data_json': initial_data_json,
+    })
 
 
 def profiles(request):

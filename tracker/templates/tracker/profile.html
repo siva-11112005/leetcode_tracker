@@ -368,9 +368,31 @@
 
     <script>
         const username = "{{ username|escapejs }}";
+        const initialData = {{ initial_data_json|default:'null'|safe }};
 
         async function loadProfile() {
             try {
+                // If the server provided initial data, use it to render immediately
+                if (typeof initialData !== 'undefined' && initialData) {
+                    console.log('Using server-provided initial data');
+                    const data = initialData;
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('content').style.display = 'block';
+                    if (data.error) {
+                        document.getElementById('content').innerHTML = `
+                            <div class="error-message">
+                                <div class="error-icon">😕</div>
+                                <h2 class="error-title">User Not Found</h2>
+                                <p class="error-text">${data.error}</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    renderProfile(data);
+                    return;
+                }
+
+                // Otherwise, fall back to fetching from the API client-side
                 const response = await fetch(`/api/user/${username}/`);
                 const data = await response.json();
                 console.log('API Response:', data);
