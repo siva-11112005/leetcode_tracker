@@ -550,7 +550,7 @@ def profile(request, username):
     # Serialize initial data to inject into template safely
     initial_data_json = json.dumps(stats, default=str)
 
-    return render(request, 'tracker/profile.html', {
+    return render(request, 'tracker/profile_professional.html', {
         'username': username,
         'initial_data_json': initial_data_json,
     })

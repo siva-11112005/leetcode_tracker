@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - LeetCode Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 40px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #6366f1;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+
+        .back-btn:hover {
+            color: #4f46e5;
+            background: #f0f0f0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 80px 20px;
+            color: #6b7280;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #6b7280;
+        }
+
+        .error-message {
+            background: white;
+            border-radius: 12px;
+            padding: 50px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .error-title {
+            color: #ef4444;
+            margin-bottom: 8px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .error-text {
+            color: #6b7280;
+        }
+
+        /* Profile Header Card */
+        .profile-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f3f4f6;
+        }
+
+        .profile-top {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: 700;
+            flex-shrink: 0;
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .profile-info h1 {
+            font-size: 32px;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .profile-username {
+            color: #6b7280;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .profile-meta {
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+            border-color: #d1d5db;
+        }
+
+        .stat-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        /* Section Title */
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 40px 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Problems Grid */
+        .problems-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .problem-card {
+            border-radius: 12px;
+            padding: 28px;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .problem-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .problem-card.easy {
+            background: linear-gradient(135deg, #86efac 0%, #22c55e 100%);
+        }
+
+        .problem-card.medium {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        }
+
+        .problem-card.hard {
+            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+        }
+
+        .problem-label {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .problem-count {
+            font-size: 40px;
+            font-weight: 700;
+        }
+
+        /* Submissions Section */
+        .submissions-section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f3f4f6;
+        }
+
+        .submission-item {
+            padding: 16px;
+            background: #f9fafb;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s;
+        }
+
+        .submission-item:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .submission-info {
+            flex: 1;
+        }
+
+        .submission-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+
+        .submission-meta {
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+        .submission-status {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            margin-left: 16px;
+        }
+
+        .submission-status.accepted {
+            background: #d1fae5;
+            color: #047857;
+        }
+
+        .submission-status.wrong {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .empty-submissions {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+            font-size: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .profile-top {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profile-info h1 {
+                font-size: 24px;
+            }
+
+            .stats-grid,
+            .problems-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .submission-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .submission-status {
+                margin-left: 0;
+                align-self: flex-start;
+            }
+
+            .profile-card {
+                padding: 25px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid,
+            .problems-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .profile-info h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <a href="/" class="back-btn">
+                <span>←</span> Back to Home
+            </a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p class="loading-text">Loading profile...</p>
+        </div>
+
+        <div id="content" style="display: none;"></div>
+    </div>
+
+    <script>
+        const username = "{{ username|escapejs }}";
+        
+        let initialData = null;
+        try {
+            const dataStr = `{{ initial_data_json|safe }}`;
+            initialData = JSON.parse(dataStr);
+        } catch (e) {
+            initialData = null;
+        }
+
+        function sanitize(val, defaultVal = 'N/A') {
+            if (val === null || val === undefined || val === 'N/A') {
+                return defaultVal;
+            }
+            return String(val);
+        }
+
+        function formatRanking(ranking) {
+            if (!ranking || ranking === 'N/A' || isNaN(ranking)) {
+                return 'N/A';
+            }
+            return '#' + Number(ranking).toLocaleString();
+        }
+
+        function formatContestRating(rating) {
+            if (!rating || rating === 'N/A' || isNaN(rating)) {
+                return 'N/A';
+            }
+            return Math.round(Number(rating) * 100) / 100;
+        }
+
+        function getRelativeTime(timestamp) {
+            if (!timestamp || isNaN(timestamp)) {
+                return 'Unknown time';
+            }
+            const now = new Date();
+            const then = new Date(Number(timestamp) * 1000);
+            const diff = Math.floor((now - then) / 1000);
+            
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return Math.floor(diff / 60) + ' min ago';
+            if (diff < 86400) return Math.floor(diff / 3600) + ' hours ago';
+            if (diff < 172800) return 'Yesterday';
+            if (diff < 604800) return Math.floor(diff / 86400) + ' days ago';
+            if (diff < 2592000) return Math.floor(diff / 604800) + ' weeks ago';
+            return Math.floor(diff / 2592000) + ' months ago';
+        }
+
+        function renderProfile(data) {
+            const content = document.getElementById('content');
+            
+            const username = sanitize(data.username, 'Unknown');
+            const displayName = sanitize(data.display_name, username);
+            const initial = displayName.charAt(0).toUpperCase() || 'U';
+            const totalSolved = Number(data.total_solved) || 0;
+            const easySolved = Number(data.easy_solved) || 0;
+            const mediumSolved = Number(data.medium_solved) || 0;
+            const hardSolved = Number(data.hard_solved) || 0;
+            const ranking = formatRanking(data.ranking);
+            const contestRating = formatContestRating(data.contest_rating);
+            const currentStreak = Number(data.current_streak) || 0;
+            const maxStreak = Number(data.max_streak) || 0;
+
+            let submissionsHTML = '';
+            if (data.recent_submissions && Array.isArray(data.recent_submissions) && data.recent_submissions.length > 0) {
+                submissionsHTML = data.recent_submissions.map(sub => {
+                    const title = sanitize(sub.title, 'Unknown');
+                    const lang = sanitize(sub.lang, 'N/A');
+                    const status = sanitize(sub.status, 'Unknown');
+                    const statusClass = status.toLowerCase().includes('accepted') ? 'accepted' : 'wrong';
+                    const statusIcon = statusClass === 'accepted' ? '✓' : '✗';
+                    const timeAgo = getRelativeTime(sub.timestamp);
+                    
+                    return `
+                        <div class="submission-item">
+                            <div class="submission-info">
+                                <div class="submission-title">${title}</div>
+                                <div class="submission-meta">${lang} • ${timeAgo}</div>
+                            </div>
+                            <div class="submission-status ${statusClass}">${statusIcon} ${status}</div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                submissionsHTML = '<div class="empty-submissions">No recent submissions</div>';
+            }
+
+            content.innerHTML = `
+                <div class="profile-card">
+                    <div class="profile-top">
+                        <div class="profile-avatar">${initial}</div>
+                        <div class="profile-info">
+                            <h1>${displayName}</h1>
+                            <p class="profile-username">@${username}</p>
+                            <p class="profile-meta">LeetCode Profile • ${totalSolved} problems solved</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-label">Global Ranking</div>
+                        <div class="stat-value">${ranking}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-label">Total Solved</div>
+                        <div class="stat-value">${totalSolved}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-label">Current Streak</div>
+                        <div class="stat-value">${currentStreak}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-label">Max Streak</div>
+                        <div class="stat-value">${maxStreak}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-label">Contest Rating</div>
+                        <div class="stat-value">${contestRating}</div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">📊 Problem Statistics</h2>
+                <div class="problems-grid">
+                    <div class="problem-card easy">
+                        <div class="problem-label">Easy</div>
+                        <div class="problem-count">${easySolved}</div>
+                    </div>
+                    <div class="problem-card medium">
+                        <div class="problem-label">Medium</div>
+                        <div class="problem-count">${mediumSolved}</div>
+                    </div>
+                    <div class="problem-card hard">
+                        <div class="problem-label">Hard</div>
+                        <div class="problem-count">${hardSolved}</div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">📝 Recent Submissions</h2>
+                <div class="submissions-section">
+                    ${submissionsHTML}
+                </div>
+            `;
+        }
+
+        async function loadProfile() {
+            try {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+                if (initialData && !initialData.error) {
+                    console.log('Using server-provided data');
+                    renderProfile(initialData);
+                    return;
+                }
+
+                console.log('Fetching from API...');
+                const response = await fetch(`/api/user/${username}/`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('API response:', data);
+
+                if (data.error) {
+                    document.getElementById('content').innerHTML = `
+                        <div class="error-message">
+                            <div class="error-icon">😕</div>
+                            <h2 class="error-title">User Not Found</h2>
+                            <p class="error-text">${data.error}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                renderProfile(data);
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                document.getElementById('content').innerHTML = `
+                    <div class="error-message">
+                        <div class="error-icon">⚠️</div>
+                        <h2 class="error-title">Error Loading Profile</h2>
+                        <p class="error-text">${error.message || 'Please try again later.'}</p>
+                    </div>
+                `;
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadProfile);
+        } else {
+            loadProfile();
+        }
+    </script>
+</body>
+</html>

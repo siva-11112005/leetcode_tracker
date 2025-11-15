@@ -47,9 +47,10 @@ class TrackedUser(models.Model):
         """Update cached statistics from normalized stats dict."""
         self.display_name = stats_data.get('display_name', self.username)
         self.total_solved = int(stats_data.get('total_solved', 0) or 0)
-        self.easy_solved = int(stats_data.get('easy_solved', 0) or 0)
-        self.medium_solved = int(stats_data.get('medium_solved', 0) or 0)
-        self.hard_solved = int(stats_data.get('hard_solved', 0) or 0)
+        # Handle both 'easy_solved' and 'easy' field names
+        self.easy_solved = int(stats_data.get('easy_solved') or stats_data.get('easy') or 0)
+        self.medium_solved = int(stats_data.get('medium_solved') or stats_data.get('medium') or 0)
+        self.hard_solved = int(stats_data.get('hard_solved') or stats_data.get('hard') or 0)
         
         ranking = stats_data.get('ranking')
         try:
