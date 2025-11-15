@@ -46,7 +46,83 @@ class LeetCodeAPI:
                             break
                 except Exception:
                     continue
-            
+
+            # If REST profile endpoints failed, try GraphQL profile fallback
+            if not profile_data:
+                try:
+                    graphql_profile_query = {
+                        "query": """
+                            query userProfile($username: String!) {
+                                matchedUser(username: $username) {
+                                    username
+                                    profile {
+                                        realName
+                                        userAvatar
+                                    }
+                                    submitStats {
+                                        acSubmissionNum {
+                                            difficulty
+                                            count
+                                        }
+                                    }
+                                    submissionCalendar
+                                    reputation
+                                    ranking
+                                }
+                            }
+                        """,
+                        "variables": {"username": username}
+                    }
+
+                    headers = {
+                        'Content-Type': 'application/json',
+                        'Referer': 'https://leetcode.com',
+                        'User-Agent': 'LeetCode-Tracker/1.0'
+                    }
+
+                    async with session.post(
+                        "https://leetcode.com/graphql",
+                        json=graphql_profile_query,
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=15)
+                    ) as gql_resp:
+                        if gql_resp.status == 200:
+                            gql_data = await gql_resp.json()
+                            m = (gql_data.get('data') or {}).get('matchedUser')
+                            if m:
+                                # Build a normalized profile_data dict similar to other endpoints
+                                prof = {}
+                                prof['username'] = m.get('username')
+                                prof['name'] = (m.get('profile') or {}).get('realName')
+                                # derive counts from submitStats.acSubmissionNum
+                                easy = 0
+                                medium = 0
+                                hard = 0
+                                total = 0
+                                ss = (m.get('submitStats') or {}).get('acSubmissionNum') or []
+                                for item in ss:
+                                    diff = (item.get('difficulty') or '').lower()
+                                    cnt = int(item.get('count') or 0)
+                                    if diff == 'all':
+                                        total = cnt
+                                    elif diff == 'easy':
+                                        easy = cnt
+                                    elif diff == 'medium':
+                                        medium = cnt
+                                    elif diff == 'hard':
+                                        hard = cnt
+                                prof['totalSolved'] = total or (easy + medium + hard)
+                                prof['easySolved'] = easy
+                                prof['mediumSolved'] = medium
+                                prof['hardSolved'] = hard
+                                prof['submissionCalendar'] = m.get('submissionCalendar')
+                                prof['ranking'] = m.get('ranking')
+                                profile_data = prof
+                                api_used = 'graphql_profile'
+                except Exception:
+                    # ignore and fall through to final not-found
+                    profile_data = None
+
             if not profile_data:
                 return {"error": f"User '{username}' not found", "username": username}
             
