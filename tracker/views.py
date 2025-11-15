@@ -93,7 +93,8 @@ class LeetCodeAPI:
                     
                     headers = {
                         'Content-Type': 'application/json',
-                        'Referer': 'https://leetcode.com'
+                        'Referer': 'https://leetcode.com',
+                        'User-Agent': 'LeetCode-Tracker/1.0'
                     }
                     
                     async with session.post(
@@ -383,7 +384,8 @@ def parse_user_stats(user_data: dict) -> dict:
 
 def home(request):
     """Home page view - Shows all tracked users with statistics"""
-    tracked_users = TrackedUser.objects.all()[:50]
+    # Return ALL users on home as requested (order by view_count desc then total_solved)
+    tracked_users = TrackedUser.objects.all().order_by('-view_count', '-total_solved')
     total_users = TrackedUser.objects.count()
     featured_users = TrackedUser.objects.filter(is_featured=True)[:6]
     top_performers = TrackedUser.objects.order_by('-total_solved')[:10]
@@ -608,7 +610,17 @@ def api_users_list(request):
     """API endpoint to get list of all tracked users"""
     try:
         sort_by = request.GET.get('sort', 'views')
-        limit = int(request.GET.get('limit', 20))
+        limit_param = request.GET.get('limit', '20')
+        # support 'all' to return every user
+        if isinstance(limit_param, str) and limit_param.lower() == 'all':
+            limit = None
+        else:
+            try:
+                limit = int(limit_param)
+            except Exception:
+                limit = 20
+        if limit is not None and limit <= 0:
+            limit = None
         search = request.GET.get('search', '').strip()
         
         users = TrackedUser.objects.all()
@@ -629,7 +641,8 @@ def api_users_list(request):
         else:
             users = users.order_by('-view_count')
         
-        users = users[:limit]
+        if limit is not None:
+            users = users[:limit]
         
         users_data = []
         for user in users:
