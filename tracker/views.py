@@ -36,7 +36,10 @@ class LeetCodeAPI:
             
             for endpoint in profile_endpoints:
                 try:
-                    async with session.get(endpoint, timeout=aiohttp.ClientTimeout(total=20)) as response:
+                    async with session.get(endpoint, timeout=aiohttp.ClientTimeout(total=20), headers={
+                        'User-Agent': 'LeetCode-Tracker/1.0',
+                        'Referer': 'https://leetcode.com'
+                    }) as response:
                         if response.status == 200:
                             profile_data = await response.json()
                             api_used = endpoint
@@ -55,7 +58,10 @@ class LeetCodeAPI:
             
             for sub_endpoint in submission_endpoints:
                 try:
-                    async with session.get(sub_endpoint, timeout=aiohttp.ClientTimeout(total=20)) as sub_response:
+                    async with session.get(sub_endpoint, timeout=aiohttp.ClientTimeout(total=20), headers={
+                        'User-Agent': 'LeetCode-Tracker/1.0',
+                        'Referer': 'https://leetcode.com'
+                    }) as sub_response:
                         if sub_response.status == 200:
                             temp_data = await sub_response.json()
                             if temp_data and isinstance(temp_data, dict) and 'submission' in temp_data:
@@ -113,7 +119,10 @@ class LeetCodeAPI:
             
             for contest_endpoint in contest_endpoints:
                 try:
-                    async with session.get(contest_endpoint, timeout=aiohttp.ClientTimeout(total=15)) as contest_response:
+                    async with session.get(contest_endpoint, timeout=aiohttp.ClientTimeout(total=15), headers={
+                        'User-Agent': 'LeetCode-Tracker/1.0',
+                        'Referer': 'https://leetcode.com'
+                    }) as contest_response:
                         if contest_response.status == 200:
                             temp_contest_data = await contest_response.json()
                             if temp_contest_data and isinstance(temp_contest_data, dict):
@@ -636,6 +645,8 @@ def api_users_list(request):
                 'view_count': user.view_count,
                 'is_featured': user.is_featured,
                 'last_updated': user.last_updated.isoformat(),
+                'current_streak': getattr(user, 'current_streak', 0) or 0,
+                'max_streak': getattr(user, 'max_streak', 0) or 0,
             })
         
         return JsonResponse({

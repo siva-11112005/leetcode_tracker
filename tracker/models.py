@@ -15,6 +15,9 @@ class TrackedUser(models.Model):
     hard_solved = models.IntegerField(default=0)
     ranking = models.IntegerField(null=True, blank=True)
     contest_rating = models.FloatField(null=True, blank=True)
+    # Streaks
+    current_streak = models.IntegerField(default=0)
+    max_streak = models.IntegerField(default=0)
     
     # Metadata
     first_tracked = models.DateTimeField(auto_now_add=True)
@@ -68,5 +71,15 @@ class TrackedUser(models.Model):
                     self.last_submission = timezone.datetime.fromtimestamp(int(ts), tz=timezone.utc)
             except Exception:
                 pass
+
+        # Update streaks if available in stats_data
+        try:
+            self.current_streak = int(stats_data.get('current_streak', 0) or 0)
+        except Exception:
+            self.current_streak = 0
+        try:
+            self.max_streak = int(stats_data.get('max_streak', 0) or 0)
+        except Exception:
+            self.max_streak = 0
 
         self.save()
